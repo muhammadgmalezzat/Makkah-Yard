@@ -3,13 +3,23 @@ const Member = require("../models/Member");
 const Package = require("../models/Package");
 const {
   createNewSubscription,
+  createFriendsSubscription,
+  createFamilySubscription,
   renewSubscription,
 } = require("../services/subscriptionService");
 
 const createSubscription = async (req, res, next) => {
   try {
-    const { memberData, packageId, startDate, paymentMethod, paymentDate } =
-      req.body;
+    const {
+      accountType,
+      memberData,
+      primaryData,
+      partnerData,
+      packageId,
+      startDate,
+      paymentMethod,
+      paymentDate,
+    } = req.body;
 
     // Validate package exists
     const pkg = await Package.findById(packageId);
@@ -17,23 +27,81 @@ const createSubscription = async (req, res, next) => {
       return res.status(404).json({ message: "الحزمة غير موجودة" });
     }
 
-    // Create subscription using transaction
-    const result = await createNewSubscription({
-      memberData,
-      packageData: pkg,
-      paymentData: {
-        startDate,
-        method: paymentMethod,
-        paidAt: paymentDate,
-      },
-      userId: req.user._id,
-    });
+    let result;
 
-    res.status(201).json({
-      message: "تم إنشاء الاشتراك بنجاح",
-      subscription: result.subscription,
-      member: result.member,
-    });
+    // Route based on account type
+    if (accountType === "individual") {
+      result = await createNewSubscription({
+        memberData,
+        packageData: pkg,
+        paymentData: {
+          startDate,
+          method: paymentMethod,
+          paidAt: paymentDate,
+        },
+        userId: req.user._id,
+      });
+
+      return res.status(201).json({
+        message: "تم إنشاء الاشتراك بنجاح",
+        subscription: result.subscription,
+        member: result.member,
+      });
+    } else if (accountType === "friends") {
+      if (!primaryData || !partnerData) {
+        return res.status(400).json({
+          message: "يجب إدخال بيانات الشخص الأول والثاني",
+        });
+      }
+
+      result = await createFriendsSubscription({
+        primaryData,
+        partnerData,
+        packageData: pkg,
+        paymentData: {
+          startDate,
+          method: paymentMethod,
+          paidAt: paymentDate,
+        },
+        userId: req.user._id,
+      });
+
+      return res.status(201).json({
+        message: "تم إنشاء الاشتراك بنجاح",
+        subscription: result.subscription,
+        primaryMember: result.primaryMember,
+        partnerMember: result.partnerMember,
+      });
+    } else if (accountType === "family") {
+      if (!primaryData) {
+        return res.status(400).json({
+          message: "يجب إدخال بيانات العضو الأساسي",
+        });
+      }
+
+      result = await createFamilySubscription({
+        primaryData,
+        partnerData: partnerData || null,
+        packageData: pkg,
+        paymentData: {
+          startDate,
+          method: paymentMethod,
+          paidAt: paymentDate,
+        },
+        userId: req.user._id,
+      });
+
+      return res.status(201).json({
+        message: "تم إنشاء الاشتراك بنجاح",
+        subscription: result.primarySubscription,
+        primaryMember: result.primaryMember,
+        partnerMember: result.partnerMember,
+      });
+    } else {
+      return res.status(400).json({
+        message: "نوع الحساب غير صحيح",
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -50,7 +118,7 @@ const renewSubscriptionCtrl = async (req, res, next) => {
       return res.status(404).json({ message: "الحزمة غير موجودة" });
     }
 
-    // Renew subscription using transaction
+    // Renew subscription
     const result = await renewSubscription({
       subscriptionId,
       packageData: pkg,
