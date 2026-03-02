@@ -155,10 +155,10 @@ const createFriendsSubscription = async ({
     const partnerSubscription = new Subscription({
       memberId: partnerMember._id,
       accountId: account._id,
-      packageId: primaryPackage._id,  // SAME package as primary
+      packageId: primaryPackage._id, // SAME package as primary
       type: "gym",
       startDate,
-      endDate: primarySubscription.endDate,  // SAME endDate, not recalculated
+      endDate: primarySubscription.endDate, // SAME endDate, not recalculated
       parentSubscriptionId: primarySubscription._id,
       pricePaid: primaryPackage.price,
       status: "active",
@@ -281,12 +281,12 @@ const createFamilySubscription = async ({
       partnerSubscription = new Subscription({
         memberId: partnerMember._id,
         accountId: account._id,
-        packageId: primaryPackage._id,  // SAME package as primary
+        packageId: primaryPackage._id, // SAME package as primary
         type: "gym",
         startDate,
-        endDate: primarySubscription.endDate,  // SAME endDate, exact copy
+        endDate: primarySubscription.endDate, // SAME endDate, exact copy
         parentSubscriptionId: primarySubscription._id,
-        pricePaid: primaryPackage.price,  // SAME price as primary
+        pricePaid: primaryPackage.price, // SAME price as primary
         status: "active",
         createdBy: userId,
       });
@@ -312,7 +312,9 @@ const createFamilySubscription = async ({
       performedBy: userId,
       after: {
         primarySubscription: primarySubscription.toObject(),
-        partnerSubscription: partnerSubscription ? partnerSubscription.toObject() : null,
+        partnerSubscription: partnerSubscription
+          ? partnerSubscription.toObject()
+          : null,
         primaryMember: primaryMember.toObject(),
         partnerMember: partnerMember ? partnerMember.toObject() : null,
         account: account.toObject(),
