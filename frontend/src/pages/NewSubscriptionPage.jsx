@@ -19,6 +19,12 @@ const accountTypes = [
   { id: "individual", label: "فردي", description: "عضو واحد", icon: "👤" },
   { id: "friends", label: "أصدقاء", description: "شخصان", icon: "👥" },
   { id: "family", label: "عائلي", description: "عائلة", icon: "👨‍👩‍👧" },
+  {
+    id: "academy_only",
+    label: "أكاديمية",
+    description: "طفل غير مشترك (أقل من 15 سنة)",
+    icon: "🏃",
+  },
 ];
 
 export default function NewSubscriptionPage() {
@@ -27,7 +33,7 @@ export default function NewSubscriptionPage() {
   const [selectedType, setSelectedType] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [loading, setLoading] = useState(false);
@@ -112,7 +118,8 @@ export default function NewSubscriptionPage() {
         packageName: selectedPackage.name,
         startDate: new Date(startDate).toLocaleDateString("ar-SA"),
         endDate: calculateEndDate(startDate, selectedPackage.durationMonths),
-        primaryName: window.primaryData?.fullName || window.memberData?.fullName,
+        primaryName:
+          window.primaryData?.fullName || window.memberData?.fullName,
         partnerName: window.partnerData?.fullName,
       });
       setSuccess(true);
@@ -185,8 +192,12 @@ export default function NewSubscriptionPage() {
               <div
                 key={type.id}
                 onClick={() => {
-                  setSelectedType(type.id);
-                  setStep(2);
+                  if (type.id === "academy_only") {
+                    navigate("/subscriptions/academy-only");
+                  } else {
+                    setSelectedType(type.id);
+                    setStep(2);
+                  }
                 }}
                 className="p-6 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition text-center"
               >
@@ -209,7 +220,9 @@ export default function NewSubscriptionPage() {
           </h2>
 
           <div>
-            <label className="block text-sm font-medium mb-2">الاسم الكامل</label>
+            <label className="block text-sm font-medium mb-2">
+              الاسم الكامل
+            </label>
             <input
               {...register("fullName")}
               placeholder="أحمد محمد"
@@ -223,16 +236,16 @@ export default function NewSubscriptionPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              رقم الهاتف
-            </label>
+            <label className="block text-sm font-medium mb-2">رقم الهاتف</label>
             <input
               {...register("phone")}
               placeholder="0501234567"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
             {errors.phone && (
-              <p className="text-red-600 text-sm mt-1">{errors.phone.message}</p>
+              <p className="text-red-600 text-sm mt-1">
+                {errors.phone.message}
+              </p>
             )}
           </div>
 
@@ -284,7 +297,10 @@ export default function NewSubscriptionPage() {
 
       {/* Step 2.5 */}
       {step === 2.5 && (
-        <form onSubmit={handleSubmit(handlePartnerSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(handlePartnerSubmit)}
+          className="space-y-4"
+        >
           <h2 className="text-2xl font-bold mb-4">
             {selectedType === "friends" && "معلومات الشخص الثاني"}
             {selectedType === "family" && "معلومات الشريك (اختياري)"}
@@ -299,7 +315,9 @@ export default function NewSubscriptionPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">الاسم الكامل</label>
+            <label className="block text-sm font-medium mb-2">
+              الاسم الكامل
+            </label>
             <input
               {...register("fullName")}
               placeholder="علي محمد"
@@ -313,16 +331,16 @@ export default function NewSubscriptionPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              رقم الهاتف
-            </label>
+            <label className="block text-sm font-medium mb-2">رقم الهاتف</label>
             <input
               {...register("phone")}
               placeholder="0509876543"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
             {errors.phone && (
-              <p className="text-red-600 text-sm mt-1">{errors.phone.message}</p>
+              <p className="text-red-600 text-sm mt-1">
+                {errors.phone.message}
+              </p>
             )}
           </div>
 
@@ -416,7 +434,9 @@ export default function NewSubscriptionPage() {
 
           {selectedPackage && (
             <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="font-medium">الحزمة المختارة: {selectedPackage.name}</p>
+              <p className="font-medium">
+                الحزمة المختارة: {selectedPackage.name}
+              </p>
               <p className="text-lg font-bold text-blue-600 mt-2">
                 {selectedPackage.price} ريال
               </p>

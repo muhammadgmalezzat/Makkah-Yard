@@ -4,6 +4,7 @@ const {
   renewSubscriptionCtrl,
   searchSubscriptions,
   getSubscriptionDetails,
+  newAcademyOnlySubscription,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
@@ -15,6 +16,14 @@ router.post(
   protect,
   allowRoles("reception", "supervisor", "admin", "owner"),
   createSubscription,
+);
+
+// Create academy-only subscription
+router.post(
+  "/academy-only",
+  protect,
+  allowRoles("reception", "supervisor", "admin", "owner"),
+  newAcademyOnlySubscription,
 );
 
 // Search subscriptions

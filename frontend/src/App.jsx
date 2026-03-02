@@ -8,6 +8,7 @@ import PackagesPage from "./pages/PackagesPage";
 import NewSubscriptionPage from "./pages/NewSubscriptionPage";
 import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
 import RenewSubscriptionPage from "./pages/RenewSubscriptionPage";
+import AcademyOnlySubscription from "./pages/AcademyOnlySubscription";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,10 @@ function App() {
             <Route
               path="/subscriptions/new"
               element={<NewSubscriptionPage />}
+            />
+            <Route
+              path="/subscriptions/academy-only"
+              element={<AcademyOnlySubscription />}
             />
             <Route
               path="/subscriptions/search"
