@@ -86,6 +86,253 @@ const createNewSubscription = async ({
   }
 };
 
+const createFriendsSubscription = async ({
+  primaryData,
+  partnerData,
+  packageData,
+  paymentData,
+  userId,
+}) => {
+  try {
+    const Package = require("../models/Package");
+
+    // Get the primary package first
+    const primaryPackage = await Package.findById(packageData._id);
+    if (!primaryPackage) throw new Error("الباقة مش موجودة");
+
+    console.log("=== FRIENDS DEBUG ===");
+    console.log("Primary package:", primaryPackage.name);
+    console.log("Duration:", primaryPackage.durationMonths);
+    console.log("====================");
+
+    // 1. Create Account
+    const account = new Account({
+      type: "friends",
+      createdBy: userId,
+    });
+    await account.save();
+
+    // 2. Create Primary Member
+    const primaryMember = new Member({
+      accountId: account._id,
+      ...primaryData,
+      role: "primary",
+    });
+    await primaryMember.save();
+
+    // 3. Create Partner Member
+    const partnerMember = new Member({
+      accountId: account._id,
+      ...partnerData,
+      role: "partner",
+    });
+    await partnerMember.save();
+
+    // 4. Update Account.primaryMemberId
+    account.primaryMemberId = primaryMember._id;
+    await account.save();
+
+    // 5. Calculate subscription dates
+    const startDate = new Date(paymentData.startDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + primaryPackage.durationMonths);
+
+    // 6. Create Subscription for Primary
+    const primarySubscription = new Subscription({
+      memberId: primaryMember._id,
+      accountId: account._id,
+      packageId: primaryPackage._id,
+      type: "gym",
+      startDate,
+      endDate,
+      pricePaid: primaryPackage.price,
+      status: "active",
+      createdBy: userId,
+    });
+    await primarySubscription.save();
+
+    // 7. Create Subscription for Partner - SAME package as primary
+    const partnerSubscription = new Subscription({
+      memberId: partnerMember._id,
+      accountId: account._id,
+      packageId: primaryPackage._id,  // SAME package as primary
+      type: "gym",
+      startDate,
+      endDate: primarySubscription.endDate,  // SAME endDate, not recalculated
+      parentSubscriptionId: primarySubscription._id,
+      pricePaid: primaryPackage.price,
+      status: "active",
+      createdBy: userId,
+    });
+    await partnerSubscription.save();
+
+    // 8. Create Payment (covers both members)
+    const payment = new Payment({
+      subscriptionId: primarySubscription._id,
+      memberId: primaryMember._id,
+      amount: primaryPackage.price,
+      method: paymentData.method,
+      type: "new",
+      paidAt: new Date(paymentData.paidAt || new Date()),
+      createdBy: userId,
+    });
+    await payment.save();
+
+    // 9. Create AuditLog
+    const auditLog = new AuditLog({
+      action: "create_subscription",
+      subscriptionId: primarySubscription._id,
+      performedBy: userId,
+      after: {
+        primarySubscription: primarySubscription.toObject(),
+        partnerSubscription: partnerSubscription.toObject(),
+        primaryMember: primaryMember.toObject(),
+        partnerMember: partnerMember.toObject(),
+        account: account.toObject(),
+      },
+    });
+    await auditLog.save();
+
+    return {
+      primarySubscription,
+      partnerSubscription,
+      primaryMember,
+      partnerMember,
+      account,
+      payment,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+const createFamilySubscription = async ({
+  primaryData,
+  partnerData,
+  packageData,
+  paymentData,
+  userId,
+}) => {
+  try {
+    const Package = require("../models/Package");
+
+    // Get the primary package first
+    const primaryPackage = await Package.findById(packageData._id);
+    if (!primaryPackage) throw new Error("الباقة الأساسية مش موجودة");
+
+    console.log("=== FAMILY DEBUG ===");
+    console.log("Primary package:", primaryPackage.name);
+    console.log("Duration:", primaryPackage.durationMonths);
+    console.log("====================");
+
+    // 1. Create Account
+    const account = new Account({
+      type: "family",
+      createdBy: userId,
+    });
+    await account.save();
+
+    // 2. Create Primary Member
+    const primaryMember = new Member({
+      accountId: account._id,
+      ...primaryData,
+      role: "primary",
+    });
+    await primaryMember.save();
+
+    // 3. Create Partner Member if provided
+    let partnerMember = null;
+    if (partnerData) {
+      partnerMember = new Member({
+        accountId: account._id,
+        ...partnerData,
+        role: "partner",
+      });
+      await partnerMember.save();
+    }
+
+    // 4. Update Account.primaryMemberId
+    account.primaryMemberId = primaryMember._id;
+    await account.save();
+
+    // 5. Calculate subscription dates
+    const startDate = new Date(paymentData.startDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + primaryPackage.durationMonths);
+
+    // 6. Create Main Subscription for Primary
+    const primarySubscription = new Subscription({
+      memberId: primaryMember._id,
+      accountId: account._id,
+      packageId: primaryPackage._id,
+      type: "gym",
+      startDate,
+      endDate,
+      pricePaid: primaryPackage.price,
+      status: "active",
+      createdBy: userId,
+    });
+    await primarySubscription.save();
+
+    // 7. Create Partner Subscription if partner exists
+    // Partner gets SAME package as primary (not sub_adult)
+    let partnerSubscription = null;
+    if (partnerMember) {
+      partnerSubscription = new Subscription({
+        memberId: partnerMember._id,
+        accountId: account._id,
+        packageId: primaryPackage._id,  // SAME package as primary
+        type: "gym",
+        startDate,
+        endDate: primarySubscription.endDate,  // SAME endDate, exact copy
+        parentSubscriptionId: primarySubscription._id,
+        pricePaid: primaryPackage.price,  // SAME price as primary
+        status: "active",
+        createdBy: userId,
+      });
+      await partnerSubscription.save();
+    }
+
+    // 8. Create Single Payment (covers whole account)
+    const payment = new Payment({
+      subscriptionId: primarySubscription._id,
+      memberId: primaryMember._id,
+      amount: primaryPackage.price,
+      method: paymentData.method,
+      type: "new",
+      paidAt: new Date(paymentData.paidAt || new Date()),
+      createdBy: userId,
+    });
+    await payment.save();
+
+    // 9. Create AuditLog
+    const auditLog = new AuditLog({
+      action: "create_subscription",
+      subscriptionId: primarySubscription._id,
+      performedBy: userId,
+      after: {
+        primarySubscription: primarySubscription.toObject(),
+        partnerSubscription: partnerSubscription ? partnerSubscription.toObject() : null,
+        primaryMember: primaryMember.toObject(),
+        partnerMember: partnerMember ? partnerMember.toObject() : null,
+        account: account.toObject(),
+      },
+    });
+    await auditLog.save();
+
+    return {
+      primarySubscription,
+      partnerSubscription,
+      primaryMember,
+      partnerMember,
+      account,
+      payment,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 const renewSubscription = async ({
   subscriptionId,
   packageData,
@@ -154,5 +401,7 @@ const renewSubscription = async ({
 
 module.exports = {
   createNewSubscription,
+  createFriendsSubscription,
+  createFamilySubscription,
   renewSubscription,
 };
