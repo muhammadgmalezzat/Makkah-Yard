@@ -6,6 +6,7 @@ const {
   createFriendsSubscription,
   createFamilySubscription,
   renewSubscription,
+  createAcademyOnlySubscription,
 } = require("../services/subscriptionService");
 
 const createSubscription = async (req, res, next) => {
@@ -202,9 +203,66 @@ const getSubscriptionDetails = async (req, res, next) => {
   }
 };
 
+const newAcademyOnlySubscription = async (req, res, next) => {
+  try {
+    const {
+      childData,
+      sport,
+      months,
+      startDate,
+      paymentMethod,
+      paymentDate,
+    } = req.body;
+
+    // Validate required fields
+    if (!childData || !childData.fullName) {
+      return res.status(400).json({ message: "الاسم الكامل مطلوب" });
+    }
+    if (!childData.gender) {
+      return res.status(400).json({ message: "النوع مطلوب" });
+    }
+    if (!childData.dateOfBirth) {
+      return res.status(400).json({ message: "تاريخ الميلاد مطلوب" });
+    }
+    if (!sport || !["football", "swimming", "combat"].includes(sport)) {
+      return res.status(400).json({ message: "الرياضة غير صحيحة" });
+    }
+    if (!months || ![1, 2, 3, 4, 5, 6, 12].includes(months)) {
+      return res
+        .status(400)
+        .json({ message: "المدة المتاحة: من 1 إلى 6 شهور أو سنة كاملة" });
+    }
+    if (!startDate) {
+      return res.status(400).json({ message: "تاريخ البداية مطلوب" });
+    }
+
+    const result = await createAcademyOnlySubscription({
+      childData,
+      sport,
+      months,
+      paymentData: {
+        startDate,
+        method: paymentMethod || "cash",
+        paidAt: paymentDate,
+      },
+      userId: req.user._id,
+    });
+
+    res.status(201).json({
+      message: "تم إنشاء اشتراك الأكاديمية بنجاح",
+      subscription: result.subscription,
+      child: result.child,
+      account: result.account,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
   searchSubscriptions,
   getSubscriptionDetails,
+  newAcademyOnlySubscription,
 };
