@@ -19,6 +19,7 @@ const accountTypes = [
   { id: "individual", label: "فردي", description: "عضو واحد", icon: "👤" },
   { id: "friends", label: "أصدقاء", description: "شخصان", icon: "👥" },
   { id: "family", label: "عائلي", description: "عائلة", icon: "👨‍👩‍👧" },
+  { id: "academy_only", label: "أكاديمية", description: "طفل غير مشترك (أقل من 15 سنة)", icon: "🏃" },
 ];
 
 export default function NewSubscriptionPage() {
@@ -185,8 +186,12 @@ export default function NewSubscriptionPage() {
               <div
                 key={type.id}
                 onClick={() => {
-                  setSelectedType(type.id);
-                  setStep(2);
+                  if (type.id === "academy_only") {
+                    navigate("/subscriptions/academy-only");
+                  } else {
+                    setSelectedType(type.id);
+                    setStep(2);
+                  }
                 }}
                 className="p-6 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition text-center"
               >

@@ -401,9 +401,171 @@ const renewSubscription = async ({
   }
 };
 
+const createAcademyOnlySubscription = async ({
+  childData,
+  sport,
+  months,
+  paymentData,
+  userId,
+}) => {
+  try {
+    const Package = require("../models/Package");
+    const mongoose = require("mongoose");
+
+    // 1. Validate months
+    const validMonths = [1, 2, 3, 4, 5, 6, 12];
+    if (!validMonths.includes(months)) {
+      throw new Error("المدة المتاحة: من 1 إلى 6 شهور أو سنة كاملة");
+    }
+
+    // Validate sport
+    const validSports = ["football", "swimming", "combat"];
+    if (!validSports.includes(sport)) {
+      throw new Error("الرياضة غير صحيحة");
+    }
+
+    // Validate childData
+    if (!childData.fullName) {
+      throw new Error("الاسم الكامل مطلوب");
+    }
+    if (!childData.gender) {
+      throw new Error("النوع مطلوب");
+    }
+    if (!childData.dateOfBirth) {
+      throw new Error("تاريخ الميلاد مطلوب");
+    }
+
+    // 2. Find the correct package
+    let pkg;
+    if (months === 12) {
+      pkg = await Package.findOne({
+        category: "academy_only",
+        sport: sport,
+        isFlexibleDuration: false,
+        durationMonths: 12,
+      });
+    } else {
+      pkg = await Package.findOne({
+        category: "academy_only",
+        sport: sport,
+        isFlexibleDuration: true,
+      });
+    }
+
+    if (!pkg) {
+      throw new Error("الباقة غير موجودة لهذه الرياضة والمدة");
+    }
+
+    // 3. Calculate price
+    let price;
+    if (months <= 5) {
+      price = pkg.pricePerMonth * months;
+    } else if (months === 6) {
+      price = pkg.pricePerMonth * 5;
+    } else if (months === 12) {
+      price = pkg.price;
+    }
+
+    // 4. Calculate age and validate
+    const birthDate = new Date(childData.dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    if (age >= 15) {
+      throw new Error("الأكاديمية للأطفال أقل من 15 سنة فقط");
+    }
+
+    console.log(`=== ACADEMY DEBUG ===`);
+    console.log(`Sport: ${sport}, Months: ${months}`);
+    console.log(`Package: ${pkg.name}`);
+    console.log(`Price: ${price}, Age: ${age}`);
+    console.log(`====================`);
+
+    // 5. Create Account
+    const account = new Account({
+      type: "academy_only",
+      createdBy: userId,
+    });
+    await account.save();
+
+    // 6. Create Member (child)
+    const child = new Member({
+      accountId: account._id,
+      ...childData,
+      role: "child",
+      guardianAccountId: null,
+    });
+    await child.save();
+
+    // 7. Update Account.primaryMemberId
+    account.primaryMemberId = child._id;
+    await account.save();
+
+    // 8. Calculate subscription dates
+    const startDate = new Date(paymentData.startDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + months);
+
+    // 9. Create Subscription
+    const subscription = new Subscription({
+      memberId: child._id,
+      accountId: account._id,
+      packageId: pkg._id,
+      type: "academy",
+      sport: sport,
+      startDate,
+      endDate,
+      pricePaid: price,
+      status: "active",
+      createdBy: userId,
+    });
+    await subscription.save();
+
+    // 10. Create Payment
+    const payment = new Payment({
+      subscriptionId: subscription._id,
+      memberId: child._id,
+      amount: price,
+      method: paymentData.method,
+      type: "new",
+      paidAt: new Date(paymentData.paidAt || new Date()),
+      createdBy: userId,
+    });
+    await payment.save();
+
+    // 11. Create AuditLog
+    const auditLog = new AuditLog({
+      action: "create_subscription",
+      subscriptionId: subscription._id,
+      performedBy: userId,
+      before: null,
+      after: subscription.toObject(),
+      notes: `اشتراك أكاديمية - ${sport}`,
+    });
+    await auditLog.save();
+
+    return {
+      subscription,
+      child,
+      account,
+      payment,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewSubscription,
   createFriendsSubscription,
   createFamilySubscription,
   renewSubscription,
+  createAcademyOnlySubscription,
 };

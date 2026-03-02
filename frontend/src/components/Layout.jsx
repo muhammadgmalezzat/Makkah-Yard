@@ -32,6 +32,13 @@ export default function Layout() {
           </Link>
 
           <Link
+            to="/subscriptions/academy-only"
+            className="block px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+          >
+            أكاديمية (غير مشترك)
+          </Link>
+
+          <Link
             to="/subscriptions/search"
             className="block px-4 py-2 rounded-lg hover:bg-gray-800 transition"
           >
