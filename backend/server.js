@@ -9,6 +9,7 @@ const connectDB = require("./src/config/db");
 const authRoutes = require("./src/routes/auth");
 const packageRoutes = require("./src/routes/packages");
 const subscriptionRoutes = require("./src/routes/subscriptions");
+const academyRoutes = require("./src/routes/academyRoutes");
 
 // Middleware
 const errorHandler = require("./src/middleware/errorHandler");
@@ -18,6 +19,11 @@ const app = express();
 
 // Connect to database
 connectDB();
+
+// Load models to ensure indexes are created
+require("./src/models/Sport");
+require("./src/models/AcademyGroup");
+require("./src/models/AcademySubscription");
 
 // Security and logging middleware
 app.use(helmet());
@@ -29,6 +35,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/academy", academyRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
