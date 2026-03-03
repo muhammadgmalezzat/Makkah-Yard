@@ -9,6 +9,14 @@ import NewSubscriptionPage from "./pages/NewSubscriptionPage";
 import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
 import RenewSubscriptionPage from "./pages/RenewSubscriptionPage";
 import AcademyOnlySubscription from "./pages/AcademyOnlySubscription";
+import AddSubMember from "./pages/AddSubMember";
+import SportsManagement from "./pages/academy/SportsManagement";
+import GroupsManagement from "./pages/academy/GroupsManagement";
+import NewAcademySubscription from "./pages/academy/NewAcademySubscription";
+import ChildProfile from "./pages/academy/ChildProfile";
+import ExpiringSubscriptions from "./pages/academy/ExpiringSubscriptions";
+import CoachList from "./pages/academy/CoachList";
+import AcademyDashboard from "./pages/academy/AcademyDashboard";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +45,10 @@ function App() {
               element={<AcademyOnlySubscription />}
             />
             <Route
+              path="/subscriptions/add-sub-member"
+              element={<AddSubMember />}
+            />
+            <Route
               path="/subscriptions/search"
               element={<SearchSubscriptionsPage />}
             />
@@ -44,6 +56,19 @@ function App() {
               path="/subscriptions/:subscriptionId/renew"
               element={<RenewSubscriptionPage />}
             />
+            <Route path="/academy/dashboard" element={<AcademyDashboard />} />
+            <Route path="/academy/sports" element={<SportsManagement />} />
+            <Route path="/academy/groups" element={<GroupsManagement />} />
+            <Route path="/academy/new" element={<NewAcademySubscription />} />
+            <Route
+              path="/academy/members/:memberId"
+              element={<ChildProfile />}
+            />
+            <Route
+              path="/academy/expiring"
+              element={<ExpiringSubscriptions />}
+            />
+            <Route path="/academy/coach-list" element={<CoachList />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

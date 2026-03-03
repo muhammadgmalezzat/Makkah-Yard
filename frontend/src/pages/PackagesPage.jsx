@@ -2,6 +2,25 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import axios from "../api/axios";
 
+const categories = [
+  { value: "", label: "الكل" },
+  { value: "individual", label: "فردي" },
+  { value: "friends", label: "أصدقاء" },
+  { value: "family_essential", label: "عائلي أساسي" },
+  { value: "sub_adult", label: "عضو إضافي بالغ" },
+  { value: "sub_child", label: "عضو إضافي أطفال" },
+  { value: "academy_only", label: "أكاديمية فقط" },
+];
+
+const categoryColors = {
+  individual: "bg-blue-100 text-blue-700",
+  friends: "bg-purple-100 text-purple-700",
+  family_essential: "bg-green-100 text-green-700",
+  sub_adult: "bg-orange-100 text-orange-700",
+  sub_child: "bg-pink-100 text-pink-700",
+  academy_only: "bg-teal-100 text-teal-700",
+};
+
 export default function PackagesPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -19,81 +38,135 @@ export default function PackagesPage() {
     },
   });
 
-  const categories = [
-    { value: "", label: "جميع الفئات" },
-    { value: "individual", label: "فردي" },
-    { value: "friends", label: "أصدقاء" },
-    { value: "family_essential", label: "عائلي أساسي" },
-    { value: "sub_adult", label: "عضو إضافي بالغ" },
-    { value: "sub_child", label: "عضو إضافي أطفال" },
-    { value: "academy_only", label: "أكاديمية فقط" },
-  ];
+  const getCategoryLabel = (value) =>
+    categories.find((c) => c.value === value)?.label ?? value;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-4xl font-bold">الحزم والأسعار</h1>
-
-      <div className="bg-white p-4 rounded-lg shadow-md">
-        <label className="block text-sm font-medium mb-2">
-          تصفية حسب الفئة
-        </label>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {categories.map((cat) => (
-            <option key={cat.value} value={cat.value}>
-              {cat.label}
-            </option>
-          ))}
-        </select>
+    <div className="space-y-6" dir="rtl">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">الحزم والأسعار</h1>
+        <p className="text-gray-500 mt-1">
+          {!isLoading && `${packages.length} حزمة متاحة`}
+        </p>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex gap-1 flex-wrap">
+        {categories.map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() => setCategoryFilter(cat.value)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
+              ${
+                categoryFilter === cat.value
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Error */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          خطأ في تحميل الحزم
+        <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl flex items-center gap-2 text-sm">
+          <span>⚠️</span> خطأ في تحميل الحزم
         </div>
       )}
 
+      {/* Loading */}
       {isLoading && (
-        <div className="text-center text-gray-500">جاري التحميل...</div>
+        <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+          <svg
+            className="animate-spin w-5 h-5 text-blue-500"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8z"
+            />
+          </svg>
+          <span className="text-sm">جاري التحميل...</span>
+        </div>
       )}
 
+      {/* Empty */}
       {packages.length === 0 && !isLoading && (
-        <div className="text-center text-gray-500">لا توجد حزم</div>
+        <div className="text-center py-16 text-gray-300">
+          <div className="text-5xl mb-3">📦</div>
+          <p className="text-sm">لا توجد حزم في هذه الفئة</p>
+        </div>
       )}
 
+      {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {packages.map((pkg) => (
           <div
             key={pkg._id}
-            className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition"
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition p-6 flex flex-col"
           >
-            <h3 className="text-lg font-bold text-gray-800">{pkg.name}</h3>
-            <p className="text-sm text-gray-600 mt-2">
-              الفئة:{" "}
-              <span className="font-medium">
-                {categories.find((c) => c.value === pkg.category)?.label}
+            {/* Top */}
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <h3 className="font-bold text-gray-900 text-base leading-snug">
+                {pkg.name}
+              </h3>
+              <span
+                className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${categoryColors[pkg.category] ?? "bg-gray-100 text-gray-600"}`}
+              >
+                {getCategoryLabel(pkg.category)}
               </span>
-            </p>
-            {pkg.sport !== "general" && (
-              <p className="text-sm text-gray-600">
-                الرياضة: <span className="font-medium">{pkg.sport}</span>
-              </p>
-            )}
-            <p className="text-sm text-gray-600">
-              المدة:{" "}
-              <span className="font-medium">{pkg.durationMonths} أشهر</span>
-            </p>
-            <p className="text-2xl font-bold text-blue-600 mt-4">
-              {pkg.price} ريال
-            </p>
-            {pkg.isFlexibleDuration && (
-              <p className="text-xs text-green-600 mt-2 font-medium">
-                ✓ مدة مرنة (سعر شهري: {pkg.pricePerMonth} ريال)
-              </p>
-            )}
+            </div>
+
+            {/* Details */}
+            <div className="space-y-2 flex-1">
+              {pkg.sport !== "general" && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">الرياضة</span>
+                  <span className="font-medium text-gray-700">{pkg.sport}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">المدة</span>
+                <span className="font-medium text-gray-700">
+                  {pkg.durationMonths} أشهر
+                </span>
+              </div>
+              {pkg.isFlexibleDuration && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">سعر شهري</span>
+                  <span className="font-medium text-gray-700">
+                    {pkg.pricePerMonth} ريال
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Price */}
+            <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+              <div>
+                <span className="text-3xl font-extrabold text-blue-600">
+                  {pkg.price}
+                </span>
+                <span className="text-sm text-gray-400 mr-1">ريال</span>
+              </div>
+              {pkg.isFlexibleDuration && (
+                <span className="text-xs bg-green-100 text-green-700 font-semibold px-2.5 py-1 rounded-full">
+                  ✓ مدة مرنة
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>

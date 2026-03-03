@@ -5,6 +5,7 @@ const {
   searchSubscriptions,
   getSubscriptionDetails,
   newAcademyOnlySubscription,
+  addSubMemberHandler,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
@@ -24,6 +25,14 @@ router.post(
   protect,
   allowRoles("reception", "supervisor", "admin", "owner"),
   newAcademyOnlySubscription,
+);
+
+// Add sub member to family account
+router.post(
+  "/add-sub-member",
+  protect,
+  allowRoles("reception", "supervisor", "admin", "owner"),
+  addSubMemberHandler,
 );
 
 // Search subscriptions
