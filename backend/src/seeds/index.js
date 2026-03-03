@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const connectDB = require("../config/db");
 const User = require("../models/User");
 const Package = require("../models/Package");
+const Sport = require("../models/Sport");
 const packagesData = require("./packages.seed");
 
 const seed = async () => {
@@ -14,11 +15,104 @@ const seed = async () => {
   // Clear existing data
   await Package.deleteMany({});
   await User.deleteMany({});
+  await Sport.deleteMany({});
   console.log("Cleared existing data");
 
   // Insert packages
   await Package.insertMany(packagesData);
   console.log("✓ Inserted 20 packages");
+
+  // Insert sports
+  const sports = [
+    // أولاد فقط
+    {
+      name: "مصارعة",
+      nameEn: "wrestling",
+      gender: "male",
+      minAge: 4,
+      maxAge: 14,
+    },
+    { name: "MMA", nameEn: "mma", gender: "male", minAge: 6, maxAge: 14 },
+    {
+      name: "جوجيتسو",
+      nameEn: "jujitsu",
+      gender: "male",
+      minAge: 4,
+      maxAge: 14,
+    },
+    { name: "جودو", nameEn: "judo", gender: "male", minAge: 4, maxAge: 14 },
+    { name: "ملاكمة", nameEn: "boxing", gender: "male", minAge: 8, maxAge: 14 },
+    {
+      name: "كرة قدم 1",
+      nameEn: "football1",
+      gender: "male",
+      minAge: 6,
+      maxAge: 12,
+    },
+    {
+      name: "كرة قدم 2",
+      nameEn: "football2",
+      gender: "male",
+      minAge: 12,
+      maxAge: 15,
+    },
+
+    // بنات فقط
+    {
+      name: "باليه",
+      nameEn: "ballet",
+      gender: "female",
+      minAge: 4,
+      maxAge: 14,
+    },
+    {
+      name: "كيك بوكس",
+      nameEn: "kickboxing",
+      gender: "female",
+      minAge: 6,
+      maxAge: 14,
+    },
+    {
+      name: "تايكوندو",
+      nameEn: "taekwondo",
+      gender: "female",
+      minAge: 6,
+      maxAge: 14,
+    },
+    {
+      name: "لياقة",
+      nameEn: "fitness",
+      gender: "female",
+      minAge: 10,
+      maxAge: 14,
+    },
+
+    // مشترك
+    {
+      name: "كاراتيه",
+      nameEn: "karate",
+      gender: "both",
+      minAge: 4,
+      maxAge: 14,
+    },
+    {
+      name: "جمباز",
+      nameEn: "gymnastics",
+      gender: "both",
+      minAge: 4,
+      maxAge: 14,
+    },
+    {
+      name: "سباحة",
+      nameEn: "swimming",
+      gender: "both",
+      minAge: 4,
+      maxAge: 14,
+    },
+  ];
+
+  await Sport.insertMany(sports);
+  console.log("✓ Inserted", sports.length, "sports");
 
   // Create users
   const admin = new User({

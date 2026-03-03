@@ -3,6 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "../api/axios";
 
+const inputClass =
+  "w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-right";
+const labelClass =
+  "block text-sm font-semibold text-gray-600 mb-1.5 text-right";
+
 export default function RenewSubscriptionPage() {
   const { subscriptionId } = useParams();
   const navigate = useNavigate();
@@ -43,7 +48,6 @@ export default function RenewSubscriptionPage() {
       setError("يجب اختيار حزمة");
       return;
     }
-
     setLoading(true);
     setError("");
     try {
@@ -54,9 +58,7 @@ export default function RenewSubscriptionPage() {
         paymentDate: new Date().toISOString(),
       });
       setSuccess(true);
-      setTimeout(() => {
-        navigate("/subscriptions/search");
-      }, 2000);
+      setTimeout(() => navigate("/subscriptions/search"), 2000);
     } catch (err) {
       setError(err.response?.data?.message || "فشل تجديد الاشتراك");
     } finally {
@@ -64,155 +66,276 @@ export default function RenewSubscriptionPage() {
     }
   };
 
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (subLoading) {
-    return <div className="text-center text-gray-500">جاري التحميل...</div>;
+    return (
+      <div className="flex items-center justify-center h-64" dir="rtl">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <svg
+            className="animate-spin w-8 h-8 text-blue-500"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8z"
+            />
+          </svg>
+          <span className="text-sm">جاري التحميل...</span>
+        </div>
+      </div>
+    );
   }
 
+  // ── Not Found ────────────────────────────────────────────────────────────
   if (!subscription) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        الاشتراك غير موجود
+      <div dir="rtl" className="max-w-lg mx-auto mt-12">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl flex items-center gap-3">
+          <span className="text-xl">⚠️</span>
+          الاشتراك غير موجود
+        </div>
       </div>
     );
   }
 
+  // ── Success ──────────────────────────────────────────────────────────────
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-green-100 border border-green-400 text-green-700 px-6 py-8 rounded-lg text-center">
-          <h2 className="text-2xl font-bold">✓ تم تجديد الاشتراك بنجاح</h2>
-          <p className="mt-2">جاري إعادة التوجيه...</p>
+      <div className="flex items-center justify-center h-64" dir="rtl">
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-sm w-full p-10 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-green-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
+            تم تجديد الاشتراك بنجاح
+          </h2>
+          <p className="text-sm text-gray-400">جاري إعادة التوجيه...</p>
         </div>
       </div>
     );
   }
 
+  // ── Main ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8">تجديد الاشتراك</h1>
+    <div className="max-w-2xl mx-auto" dir="rtl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">تجديد الاشتراك</h1>
+        <p className="text-gray-500 mt-1">
+          اختر الحزمة الجديدة وأكمل بيانات الدفع
+        </p>
+      </div>
 
-      <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-6">
-        <h2 className="text-xl font-bold text-blue-900 mb-4">
-          معلومات الاشتراك الحالي
+      {/* Current Subscription Info */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
+          الاشتراك الحالي
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-blue-700">الاسم</p>
-            <p className="font-bold text-blue-900">
-              {subscription.memberId.fullName}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-blue-700">الحزمة الحالية</p>
-            <p className="font-bold text-blue-900">
-              {subscription.packageId.name}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-blue-700">تاريخ البداية</p>
-            <p className="font-bold text-blue-900">
-              {new Date(subscription.startDate).toLocaleDateString("ar-SA")}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-blue-700">تاريخ النهاية</p>
-            <p className="font-bold text-blue-900">
-              {new Date(subscription.endDate).toLocaleDateString("ar-SA")}
-            </p>
-          </div>
+        <div className="grid grid-cols-2 gap-4">
+          <InfoItem label="الاسم" value={subscription.memberId.fullName} />
+          <InfoItem
+            label="الحزمة الحالية"
+            value={subscription.packageId.name}
+          />
+          <InfoItem
+            label="تاريخ البداية"
+            value={new Date(subscription.startDate).toLocaleDateString("ar-SA")}
+          />
+          <InfoItem
+            label="تاريخ النهاية"
+            value={new Date(subscription.endDate).toLocaleDateString("ar-SA")}
+            highlight={new Date(subscription.endDate) < new Date()}
+          />
         </div>
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 flex items-center gap-2">
+          <span>⚠️</span> {error}
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-lg shadow-md space-y-4"
-      >
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            اختر حزمة جديدة
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Package Selection */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <label className="text-sm font-semibold text-gray-400 uppercase tracking-wide block mb-4">
+            اختر الحزمة الجديدة
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-3">
             {packages.map((pkg) => (
-              <div
+              <button
                 key={pkg._id}
+                type="button"
                 onClick={() => setSelectedPackage(pkg)}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                  selectedPackage?._id === pkg._id
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-gray-300 hover:border-blue-400"
-                }`}
+                className={`w-full flex items-center justify-between px-5 py-4 border-2 rounded-2xl text-right transition-all
+                  ${
+                    selectedPackage?._id === pkg._id
+                      ? "border-blue-600 bg-blue-50"
+                      : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                  }`}
               >
-                <h3 className="font-bold">{pkg.name}</h3>
-                <p className="text-sm text-gray-600">
-                  {pkg.durationMonths} أشهر
-                </p>
-                <p className="text-2xl font-bold text-blue-600 mt-2">
-                  {pkg.price} ريال
-                </p>
-              </div>
+                <div>
+                  <p className="font-bold text-gray-800">{pkg.name}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {pkg.durationMonths} أشهر
+                  </p>
+                </div>
+                <div className="text-left">
+                  <span className="text-2xl font-extrabold text-blue-600">
+                    {pkg.price}
+                  </span>
+                  <span className="text-sm text-gray-500 mr-1">ريال</span>
+                </div>
+              </button>
             ))}
           </div>
-        </div>
 
-        {selectedPackage && (
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-sm text-green-700">
-              تاريخ النهاية الجديد:{" "}
-              <span className="font-bold">
-                {calculateEndDate(startDate, selectedPackage.durationMonths)}
+          {selectedPackage && (
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl px-4 py-3 mt-4">
+              <span>📅</span>
+              <span>
+                تاريخ الانتهاء الجديد:{" "}
+                <strong>
+                  {calculateEndDate(startDate, selectedPackage.durationMonths)}
+                </strong>
               </span>
-            </p>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            تاريخ البداية
+        {/* Date & Payment */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+          <label className="text-sm font-semibold text-gray-400 uppercase tracking-wide block">
+            بيانات الدفع
           </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+
+          <div>
+            <label className={labelClass}>تاريخ البداية</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>طريقة الدفع</label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              {[
+                { value: "cash", label: "نقدي", icon: "💵" },
+                { value: "network", label: "تحويل بنكي", icon: "🏦" },
+                { value: "tabby", label: "تابي", icon: "💳" },
+              ].map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(m.value)}
+                  className={`py-3 rounded-xl border-2 text-center text-sm font-semibold transition-all
+                    ${
+                      paymentMethod === m.value
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-gray-200 text-gray-600 hover:border-blue-300"
+                    }`}
+                >
+                  <div className="text-xl mb-1">{m.icon}</div>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selectedPackage && (
+            <div className="bg-blue-600 rounded-2xl px-6 py-4 flex items-center justify-between">
+              <span className="text-blue-100 font-medium">الإجمالي</span>
+              <div className="text-left">
+                <span className="text-3xl font-extrabold text-white">
+                  {selectedPackage.price}
+                </span>
+                <span className="text-blue-200 mr-1">ريال</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">طريقة الدفع</label>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="cash">نقدي</option>
-            <option value="network">تحويل بنكي</option>
-            <option value="tabby">تابي</option>
-          </select>
-        </div>
-
-        <div className="flex gap-4">
+        {/* Actions */}
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex-1 bg-gray-400 text-white py-2 rounded-lg hover:bg-gray-500"
+            className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
           >
             إلغاء
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+            className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "جاري التجديد..." : "تجديد الاشتراك"}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg
+                  className="animate-spin w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  />
+                </svg>
+                جاري التجديد...
+              </span>
+            ) : (
+              "✓ تجديد الاشتراك"
+            )}
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function InfoItem({ label, value, highlight }) {
+  return (
+    <div className="bg-gray-50 rounded-xl px-4 py-3">
+      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+      <p
+        className={`font-semibold ${highlight ? "text-red-500" : "text-gray-800"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
