@@ -562,10 +562,196 @@ const createAcademyOnlySubscription = async ({
   }
 };
 
+const addSubMemberToFamily = async ({
+  accountId,
+  memberData,
+  packageId,
+  months,
+  startDate,
+  paymentData,
+  userId,
+}) => {
+  try {
+    const Package = require("../models/Package");
+    const mongoose = require("mongoose");
+
+    // 1. Find and verify account is family type
+    const account = await Account.findById(accountId);
+    if (!account) {
+      throw new Error("الحساب غير موجود");
+    }
+    if (account.type !== "family") {
+      throw new Error("هذا الحساب ليس حساباً عائلياً");
+    }
+
+    // 2. Find primary subscription
+    const primarySubscription = await Subscription.findOne({
+      accountId: accountId,
+      parentSubscriptionId: null,
+      status: "active",
+    });
+    if (!primarySubscription) {
+      throw new Error("مفيش اشتراك أساسي نشط لهذا الحساب");
+    }
+
+    // 3. Find package
+    const pkg = await Package.findById(packageId);
+    if (!pkg) {
+      throw new Error("الباقة غير موجودة");
+    }
+    if (!["sub_adult", "sub_child"].includes(pkg.category)) {
+      throw new Error("الباقة دي مش مناسبة لعضو فرعي");
+    }
+
+    // 4. Validate sub_child age
+    if (pkg.category === "sub_child") {
+      if (!memberData.dateOfBirth) {
+        throw new Error("تاريخ الميلاد مطلوب للأطفال");
+      }
+      const birthDate = new Date(memberData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        age--;
+      }
+      if (age >= 15) {
+        throw new Error("باقة الأطفال للأعمار أقل من 15 سنة فقط");
+      }
+    }
+
+    // 5. Calculate sub member end date
+    const subStartDate = new Date(startDate);
+    const subEndDate = new Date(subStartDate);
+
+    if (pkg.category === "sub_adult") {
+      // sub_adult uses package.durationMonths
+      subEndDate.setMonth(subEndDate.getMonth() + (pkg.durationMonths || 3));
+    } else if (pkg.category === "sub_child") {
+      // sub_child uses provided months
+      subEndDate.setMonth(subEndDate.getMonth() + months);
+    }
+
+    // 6. Validate endDate doesn't exceed primary
+    if (subEndDate > primarySubscription.endDate) {
+      const subEndStr = subEndDate.toLocaleDateString("ar-SA");
+      const primaryEndStr =
+        primarySubscription.endDate.toLocaleDateString("ar-SA");
+      throw new Error(
+        `تاريخ انتهاء العضو الفرعي (${subEndStr}) يتجاوز انتهاء الاشتراك الأساسي (${primaryEndStr})`,
+      );
+    }
+
+    // 7. Calculate price
+    let pricePaid;
+    if (pkg.category === "sub_adult") {
+      pricePaid = pkg.price;
+    } else if (pkg.category === "sub_child") {
+      const numMonths = parseInt(months, 10);
+      if (numMonths <= 5) {
+        pricePaid = pkg.pricePerMonth * numMonths;
+      } else {
+        // 6+ months gets 5-month price (discount)
+        pricePaid = pkg.pricePerMonth * 5;
+      }
+    }
+
+    // Validate price is a valid number
+    if (!pricePaid || isNaN(pricePaid) || pricePaid <= 0) {
+      console.error("Price calculation error:", {
+        category: pkg.category,
+        months,
+        pricePerMonth: pkg.pricePerMonth,
+        price: pkg.price,
+        calculatedPrice: pricePaid,
+      });
+      throw new Error("خطأ في حساب السعر - تأكد من بيانات الباقة");
+    }
+
+    console.log(
+      "Calculated pricePaid:",
+      pricePaid,
+      "months:",
+      months,
+      "pricePerMonth:",
+      pkg.pricePerMonth,
+    );
+
+    console.log(`=== ADD SUB MEMBER ===`);
+    console.log(`Package: ${pkg.name}, Category: ${pkg.category}`);
+    console.log(`Months: ${months}, Price: ${pricePaid}`);
+    console.log(`====================`);
+
+    // 8. Create Member
+    const member = new Member({
+      accountId: accountId,
+      ...memberData,
+      role: pkg.category === "sub_child" ? "child" : "partner",
+      guardianAccountId: accountId,
+    });
+    await member.save();
+
+    // 9. Create Subscription
+    const sub = new Subscription({
+      memberId: member._id,
+      accountId: accountId,
+      packageId: packageId,
+      parentSubscriptionId: primarySubscription._id,
+      type: pkg.category === "sub_child" ? "academy" : "gym",
+      sport: pkg.sport || null,
+      startDate: subStartDate,
+      endDate: subEndDate,
+      pricePaid: parseFloat(pricePaid),
+      status: "active",
+      createdBy: userId,
+    });
+    await sub.save();
+
+    // 10. Create Payment
+    if (isNaN(pricePaid)) {
+      throw new Error("خطأ: السعر المحسوب غير صحيح - لا يمكن إنشاء سجل الدفع");
+    }
+    const payment = new Payment({
+      subscriptionId: sub._id,
+      memberId: member._id,
+      amount: pricePaid,
+      method: paymentData.method || "cash",
+      type: "new",
+      paidAt: new Date(paymentData.paidAt || new Date()),
+      createdBy: userId,
+    });
+    await payment.save();
+
+    // 11. Create AuditLog
+    const auditLog = new AuditLog({
+      action: "add_sub_member",
+      subscriptionId: sub._id,
+      performedBy: userId,
+      before: null,
+      after: sub.toObject(),
+      notes: `إضافة عضو فرعي - ${pkg.category === "sub_child" ? "طفل" : "بالغ"}`,
+    });
+    await auditLog.save();
+
+    return {
+      subscription: sub,
+      member,
+      account,
+      payment,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createNewSubscription,
   createFriendsSubscription,
   createFamilySubscription,
   renewSubscription,
   createAcademyOnlySubscription,
+  addSubMemberToFamily,
 };

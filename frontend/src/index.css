@@ -1,11 +1,5 @@
 @import "tailwindcss";
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 html {
   direction: rtl;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

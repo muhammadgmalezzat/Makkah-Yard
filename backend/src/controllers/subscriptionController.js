@@ -7,6 +7,7 @@ const {
   createFamilySubscription,
   renewSubscription,
   createAcademyOnlySubscription,
+  addSubMemberToFamily,
 } = require("../services/subscriptionService");
 
 const createSubscription = async (req, res, next) => {
@@ -158,24 +159,38 @@ const searchSubscriptions = async (req, res, next) => {
 
     // Get subscriptions for these members
     const memberIds = members.map((m) => m._id);
+    const Package = require("../models/Package");
+
+    // Find active sub_adult packages first
+    const subAdultPackages = await Package.find({
+      category: "sub_adult",
+      isActive: true,
+    }).select("_id");
+
+    const packageIds = subAdultPackages.map((p) => p._id);
+
     const subscriptions = await Subscription.find({
       memberId: { $in: memberIds },
+      packageId: { $in: packageIds },
+      status: "active",
     })
       .populate("memberId", "fullName phone")
-      .populate("packageId", "name price durationMonths")
+      .populate("packageId", "name price durationMonths category")
       .sort({ createdAt: -1 })
       .limit(20);
 
     // Format results
-    const results = subscriptions.map((sub) => ({
-      id: sub._id,
-      memberName: sub.memberId.fullName,
-      phone: sub.memberId.phone,
-      packageName: sub.packageId.name,
-      status: sub.status,
-      endDate: sub.endDate,
-      subscriptionId: sub._id,
-    }));
+    const results = subscriptions
+      .filter((sub) => sub.memberId && sub.packageId)
+      .map((sub) => ({
+        id: sub._id,
+        memberName: sub.memberId?.fullName || "Unknown",
+        phone: sub.memberId?.phone || "-",
+        packageName: sub.packageId?.name || "Unknown",
+        status: sub.status,
+        endDate: sub.endDate,
+        subscriptionId: sub._id,
+      }));
 
     res.json(results);
   } catch (error) {
@@ -205,14 +220,8 @@ const getSubscriptionDetails = async (req, res, next) => {
 
 const newAcademyOnlySubscription = async (req, res, next) => {
   try {
-    const {
-      childData,
-      sport,
-      months,
-      startDate,
-      paymentMethod,
-      paymentDate,
-    } = req.body;
+    const { childData, sport, months, startDate, paymentMethod, paymentDate } =
+      req.body;
 
     // Validate required fields
     if (!childData || !childData.fullName) {
@@ -259,10 +268,72 @@ const newAcademyOnlySubscription = async (req, res, next) => {
   }
 };
 
+const addSubMemberHandler = async (req, res, next) => {
+  try {
+    const {
+      accountId,
+      memberData,
+      packageId,
+      months,
+      startDate,
+      paymentMethod,
+    } = req.body;
+
+    // Validate required fields
+    if (!accountId) {
+      return res.status(400).json({ message: "معرف الحساب مطلوب" });
+    }
+    if (!memberData || !memberData.fullName) {
+      return res.status(400).json({ message: "الاسم الكامل مطلوب" });
+    }
+    if (!memberData.gender) {
+      return res.status(400).json({ message: "النوع مطلوب" });
+    }
+    if (!packageId) {
+      return res.status(400).json({ message: "الباقة مطلوبة" });
+    }
+    if (!startDate) {
+      return res.status(400).json({ message: "تاريخ البداية مطلوب" });
+    }
+
+    // Get package to check category
+    const pkg = await Package.findById(packageId);
+    if (!pkg) {
+      return res.status(404).json({ message: "الباقة غير موجودة" });
+    }
+
+    // Validate months for sub_child
+    if (pkg.category === "sub_child" && !months) {
+      return res.status(400).json({ message: "عدد الأشهر مطلوب" });
+    }
+
+    const result = await addSubMemberToFamily({
+      accountId,
+      memberData,
+      packageId,
+      months,
+      startDate,
+      paymentData: {
+        method: paymentMethod || "cash",
+      },
+      userId: req.user._id,
+    });
+
+    res.status(201).json({
+      message: "تم إضافة العضو الفرعي بنجاح",
+      subscription: result.subscription,
+      member: result.member,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
   searchSubscriptions,
   getSubscriptionDetails,
   newAcademyOnlySubscription,
+  addSubMemberHandler,
 };
