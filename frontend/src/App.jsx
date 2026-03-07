@@ -60,6 +60,10 @@ function App() {
               element={<ChildProfile />}
             />
             <Route
+              path="/academy/members/:memberId/subscription/:subscriptionId"
+              element={<ChildProfile />}
+            />
+            <Route
               path="/academy/expiring"
               element={<ExpiringSubscriptions />}
             />

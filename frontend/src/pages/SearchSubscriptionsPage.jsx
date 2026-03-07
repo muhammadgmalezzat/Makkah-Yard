@@ -21,7 +21,11 @@ export default function SearchSubscriptionsPage() {
       const response = await axios.get(
         `/subscriptions/search?q=${encodeURIComponent(searchQuery)}`,
       );
-      return response.data;
+      console.log("Search response:", response.data);
+      const searchResults = response.data.data || [];
+      console.log("Results array:", searchResults);
+      console.log("First result:", searchResults[0]);
+      return searchResults;
     },
   });
 
@@ -97,28 +101,117 @@ export default function SearchSubscriptionsPage() {
       {/* Results */}
       <div className="space-y-3">
         {results.map((result) => {
-          const status = statusConfig[result.status] || {
-            label: result.status,
-            classes: "bg-gray-100 text-gray-600",
-          };
-          const expired = isExpired(result.endDate);
+          const memberName = result.member?.fullName || "Unknown";
+          const phone = result.member?.phone || "-";
+          const subscriptionType = result.subscriptionType;
+
+          let status, detailsContent, actionButton;
+
+          if (subscriptionType === "gym") {
+            // GYM SUBSCRIPTION
+            status = statusConfig[result.lastSubscription?.status] || {
+              label: result.lastSubscription?.status || "نشط",
+              classes: "bg-green-100 text-green-700",
+            };
+            const packageName =
+              result.lastSubscription?.packageId?.name || "لا يوجد";
+            const endDate = result.lastSubscription?.endDate;
+            const subscriptionId = result.lastSubscription?._id;
+            const expired = endDate && isExpired(endDate);
+
+            detailsContent = endDate && (
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-0.5">الحزمة</p>
+                  <p className="font-semibold text-gray-800 text-sm">
+                    {packageName}
+                  </p>
+                </div>
+                <div
+                  className={`rounded-xl px-4 py-3 ${expired ? "bg-red-50" : "bg-gray-50"}`}
+                >
+                  <p className="text-xs text-gray-400 mb-0.5">تاريخ النهاية</p>
+                  <p
+                    className={`font-semibold text-sm ${expired ? "text-red-500" : "text-gray-800"}`}
+                  >
+                    {new Date(endDate).toLocaleDateString("ar-SA")}
+                    {expired && <span className="text-xs mr-1">(منتهي)</span>}
+                  </p>
+                </div>
+              </div>
+            );
+
+            actionButton = (
+              <button
+                onClick={() =>
+                  navigate(`/subscriptions/${subscriptionId}/renew`)
+                }
+                className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+              >
+                تجديد الاشتراك
+              </button>
+            );
+          } else if (subscriptionType === "academy") {
+            // ACADEMY SUBSCRIPTION
+            status = {
+              label: "أكاديمية",
+              classes: "bg-blue-100 text-blue-700",
+            };
+            const sportName = result.lastAcademySubscription?.sportId?.name || "رياضة";
+            const groupName = result.lastAcademySubscription?.groupId?.name || "مجموعة";
+            const endDate = result.lastAcademySubscription?.endDate;
+            const expired = endDate && isExpired(endDate);
+            const memberId = result.member?._id;
+
+            detailsContent = (
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-0.5">الرياضة</p>
+                  <p className="font-semibold text-gray-800 text-sm">
+                    {sportName}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-0.5">المجموعة</p>
+                  <p className="font-semibold text-gray-800 text-sm">
+                    {groupName}
+                  </p>
+                </div>
+              </div>
+            );
+
+            actionButton = (
+              <button
+                onClick={() => navigate(`/academy/members/${memberId}`)}
+                className="w-full py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition"
+              >
+                عرض الملف
+              </button>
+            );
+          } else {
+            // NO SUBSCRIPTION
+            status = {
+              label: "بدون اشتراك",
+              classes: "bg-gray-100 text-gray-600",
+            };
+            detailsContent = null;
+            actionButton = null;
+          }
 
           return (
             <div
-              key={result.subscriptionId}
+              key={result.lastSubscription?._id || result.lastAcademySubscription?._id || result.member?._id}
               className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition"
             >
               <div className="flex items-start justify-between gap-4 mb-4">
                 {/* Name + Phone */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
-                    {result.memberName?.charAt(0)}
+                    {memberName?.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">
-                      {result.memberName}
-                    </p>
-                    <p className="text-sm text-gray-500">{result.phone}</p>
+                    <p className="font-bold text-gray-900">{memberName}</p>
+                    <p className="text-sm text-gray-500">{phone}</p>
                   </div>
                 </div>
                 {/* Status Badge */}
@@ -129,34 +222,9 @@ export default function SearchSubscriptionsPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-gray-50 rounded-xl px-4 py-3">
-                  <p className="text-xs text-gray-400 mb-0.5">الحزمة</p>
-                  <p className="font-semibold text-gray-800 text-sm">
-                    {result.packageName}
-                  </p>
-                </div>
-                <div
-                  className={`rounded-xl px-4 py-3 ${expired ? "bg-red-50" : "bg-gray-50"}`}
-                >
-                  <p className="text-xs text-gray-400 mb-0.5">تاريخ النهاية</p>
-                  <p
-                    className={`font-semibold text-sm ${expired ? "text-red-500" : "text-gray-800"}`}
-                  >
-                    {new Date(result.endDate).toLocaleDateString("ar-SA")}
-                    {expired && <span className="text-xs mr-1">(منتهي)</span>}
-                  </p>
-                </div>
-              </div>
+              {detailsContent}
 
-              <button
-                onClick={() =>
-                  navigate(`/subscriptions/${result.subscriptionId}/renew`)
-                }
-                className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-              >
-                تجديد الاشتراك
-              </button>
+              {actionButton}
             </div>
           );
         })}
