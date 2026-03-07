@@ -5,6 +5,7 @@ const auditLogSchema = new mongoose.Schema(
     action: {
       type: String,
       enum: [
+        "new_subscription",
         "create_subscription",
         "renew_subscription",
         "transfer_subscription",

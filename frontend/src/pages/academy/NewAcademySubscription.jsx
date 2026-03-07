@@ -80,16 +80,95 @@ export default function NewAcademySubscription() {
     enabled: !!selectedSport,
   });
 
-  // Fetch sub member packages for price calculation
-  const { data: subChildPackages = [] } = useQuery({
-    queryKey: ["packages-sub-child"],
+  // Fetch monthly academy package for selected sport
+  const { data: monthlyPackage } = useQuery({
+    queryKey: ["packages-academy-monthly", selectedSport?._id],
     queryFn: async () => {
-      const response = await axios.get(
-        "/packages?category=sub_child&isActive=true",
-      );
-      return response.data;
+      if (!selectedSport) return null;
+
+      // Map Arabic sport names to English for API queries
+      const sportMap = {
+        "كرة القدم": "football",
+        سباحة: "swimming",
+        قتال: "combat",
+      };
+
+      const sportValue =
+        sportMap[selectedSport.name] ||
+        selectedSport.nameEn ||
+        selectedSport.name;
+      console.log("Selected sport:", selectedSport);
+      console.log("Sport value for API:", sportValue);
+
+      try {
+        const monthlyRes = await axios.get("/packages", {
+          params: {
+            category: "academy_only",
+            sport: sportValue,
+            isFlexibleDuration: "true",
+            isActive: "true",
+          },
+        });
+        console.log("Monthly packages response:", monthlyRes.data);
+        const monthlyPkg =
+          monthlyRes.data && monthlyRes.data[0] ? monthlyRes.data[0] : null;
+        console.log("monthly package:", monthlyPkg);
+        return monthlyPkg || null;
+      } catch (error) {
+        console.error("Error fetching monthly package:", error);
+        return null;
+      }
     },
+    enabled: !!selectedSport,
   });
+
+  // Fetch annual academy package for selected sport
+  const { data: annualPackage } = useQuery({
+    queryKey: ["packages-academy-annual", selectedSport?._id],
+    queryFn: async () => {
+      if (!selectedSport) return null;
+
+      // Map Arabic sport names to English for API queries
+      const sportMap = {
+        "كرة القدم": "football",
+        سباحة: "swimming",
+        قتال: "combat",
+      };
+
+      const sportValue =
+        sportMap[selectedSport.name] ||
+        selectedSport.nameEn ||
+        selectedSport.name;
+
+      try {
+        const annualRes = await axios.get("/packages", {
+          params: {
+            category: "academy_only",
+            sport: sportValue,
+            isFlexibleDuration: "false",
+            isActive: "true",
+          },
+        });
+        console.log("Annual packages response:", annualRes.data);
+        const annualPkg =
+          annualRes.data && annualRes.data[0] ? annualRes.data[0] : null;
+        console.log("annual package:", annualPkg);
+        return annualPkg || null;
+      } catch (error) {
+        console.error("Error fetching annual package:", error);
+        return null;
+      }
+    },
+    enabled: !!selectedSport,
+  });
+
+  // Calculate price based on months and packages
+  const calculatePrice = (months, monthlyPkg, annualPkg) => {
+    if (!monthlyPkg) return 0;
+    if (months === 12) return annualPkg?.price || monthlyPkg.pricePerMonth * 12;
+    if (months === 6) return monthlyPkg.pricePerMonth * 5;
+    return monthlyPkg.pricePerMonth * months;
+  };
 
   // Calculate age from birthdate
   useEffect(() => {
@@ -110,21 +189,25 @@ export default function NewAcademySubscription() {
     }
   }, [childData.dateOfBirth]);
 
-  // Calculate price based on duration and package
+  // Calculate price based on duration and academy package
   useEffect(() => {
-    if (subChildPackages.length > 0 && durationMonths) {
-      const pkg = subChildPackages[0];
-      let price;
-      if (durationMonths <= 5) {
-        price = pkg.pricePerMonth * durationMonths;
-      } else if (durationMonths === 6) {
-        price = pkg.pricePerMonth * 5;
-      } else if (durationMonths === 12) {
-        price = pkg.annualPrice || pkg.pricePerMonth * 12;
-      }
-      setCalculatedPrice(price || 0);
+    const price = calculatePrice(durationMonths, monthlyPackage, annualPackage);
+    setCalculatedPrice(price);
+  }, [durationMonths, monthlyPackage, annualPackage]);
+
+  // Check if package was found for selected sport
+  useEffect(() => {
+    if (selectedSport && !monthlyPackage) {
+      console.error(
+        "No monthly package found for sport:",
+        selectedSport.nameEn,
+      );
+      setError("لا توجد باقة لهذه الرياضة، يرجى التواصل مع الإدارة");
+    } else if (selectedSport) {
+      // Clear error if package is found
+      setError("");
     }
-  }, [durationMonths, subChildPackages]);
+  }, [selectedSport, monthlyPackage]);
 
   // Handle search for parent account
   useEffect(() => {
@@ -166,6 +249,16 @@ export default function NewAcademySubscription() {
   };
 
   const handleSubmit = async () => {
+    console.log("=== SUBMIT DATA ===");
+    console.log("childData:", childData);
+    console.log("selectedSport:", selectedSport);
+    console.log("selectedGroup:", selectedGroup);
+    console.log("durationMonths:", durationMonths);
+    console.log("startDate:", startDate);
+    console.log("paymentMethod:", paymentMethod);
+    console.log("calculatedPrice:", calculatedPrice);
+    console.log("===================");
+
     if (step === 0) {
       if (!childType) {
         setError("اختر نوع الاشتراك");
@@ -227,6 +320,12 @@ export default function NewAcademySubscription() {
     }
 
     if (step === 6) {
+      // Validate price before submission
+      if (!calculatedPrice || calculatedPrice <= 0 || isNaN(calculatedPrice)) {
+        setError("السعر غير صحيح - يرجى إعادة اختيار الرياضة والمدة");
+        return;
+      }
+
       setLoading(true);
       setError("");
       try {
@@ -263,40 +362,57 @@ export default function NewAcademySubscription() {
             price: calculatedPrice,
           });
         } else {
-          const response = await axios.post("/academy/subscriptions", {
-            childData,
+          const payload = {
+            childData: {
+              fullName: childData.fullName,
+              gender: childData.gender,
+              dateOfBirth: childData.dateOfBirth,
+              phone: childData.phone?.trim() || null,
+              guardianName: childData.guardianName?.trim() || null,
+              guardianPhone: childData.guardianPhone?.trim() || null,
+            },
             sportId: selectedSport._id,
             groupId: selectedGroup._id,
-            memberType: childType,
+            memberType: childType || "standalone",
             parentSubscriptionId:
-              childType === "linked" ? parentAccount.subscriptionId : null,
+              childType === "linked" ? parentAccount?.subscriptionId : null,
             durationMonths: parseInt(durationMonths),
-            startDate,
+            startDate: startDate,
             paymentData: {
-              method: paymentMethod,
               amount: calculatedPrice,
-              paidAt: new Date(),
+              method: paymentMethod || "cash",
             },
-          });
+          };
+
+          console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
+
+          const response = await axios.post("/academy/subscriptions", payload);
+
+          // Extract properly structured response
+          const { member, subscription, sport, group } = response.data.data;
 
           setSuccessData({
-            childName: response.data.child.fullName,
-            sportName: selectedSport.name,
-            groupName: selectedGroup.name,
-            startDate: new Date(startDate).toLocaleDateString("ar-SA"),
-            endDate: new Date(
-              new Date(startDate).setMonth(
-                new Date(startDate).getMonth() + durationMonths,
-              ),
-            ).toLocaleDateString("ar-SA"),
-            price: calculatedPrice,
+            childName: member.fullName,
+            sportName: sport.name,
+            groupName: group.name,
+            startDate: new Date(subscription.startDate).toLocaleDateString(
+              "ar-SA",
+            ),
+            endDate: new Date(subscription.endDate).toLocaleDateString("ar-SA"),
+            price: subscription.pricePaid,
           });
         }
         setSuccess(true);
       } catch (err) {
-        setError(
-          err.response?.data?.message || "فشل إنشاء الاشتراك، حاول مرة أخرى",
+        console.error(
+          "Subscription creation error:",
+          err.response?.data || err.message,
         );
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "فشل إنشاء الاشتراك، حاول مرة أخرى";
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -829,6 +945,11 @@ export default function NewAcademySubscription() {
             <p className="text-3xl font-bold text-blue-600">
               {calculatedPrice} ريال
             </p>
+            {durationMonths === 6 && (
+              <p className="text-sm text-green-600 mt-2">
+                ✓ ٦ أشهر بسعر ٥ أشهر = {calculatedPrice} ريال
+              </p>
+            )}
           </div>
         </div>
 
@@ -858,8 +979,8 @@ export default function NewAcademySubscription() {
         <h1 className="text-3xl font-bold text-right mb-6">الدفع والملخص</h1>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-700 text-sm font-medium">❌ {error}</p>
           </div>
         )}
 

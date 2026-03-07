@@ -18,8 +18,8 @@ const paymentSchema = new mongoose.Schema(
     },
     method: {
       type: String,
-      enum: ["cash", "network", "tabby"],
-      required: true,
+      enum: ["cash", "network", "tabby", "tamara", "transfer"],
+      default: "cash",
     },
     type: {
       type: String,

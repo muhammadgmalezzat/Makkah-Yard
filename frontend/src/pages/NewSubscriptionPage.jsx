@@ -249,8 +249,8 @@ export default function NewSubscriptionPage() {
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 flex items-center gap-2">
-            <span>⚠️</span> {error}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <p className="text-red-700 text-sm font-medium">❌ {error}</p>
           </div>
         )}
 
@@ -268,7 +268,7 @@ export default function NewSubscriptionPage() {
                     key={type.id}
                     onClick={() => {
                       if (type.id === "academy_only") {
-                        navigate("/subscriptions/academy-only");
+                        navigate("/academy/new");
                       } else {
                         setSelectedType(type.id);
                         setStep(2);
