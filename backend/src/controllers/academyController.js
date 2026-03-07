@@ -8,8 +8,15 @@ const {
 } = require("../services/academyService");
 
 // POST /api/academy/subscriptions - create new academy subscription
-const createSubscriptionCtrl = async (req, res, next) => {
+const createSubscriptionCtrl = async (req, res) => {
   try {
+    console.log("BODY:", JSON.stringify(req.body, null, 2));
+    console.log("USER:", req.user);
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "غير مصرح" });
+    }
+
     const {
       childData,
       sportId,
@@ -21,55 +28,58 @@ const createSubscriptionCtrl = async (req, res, next) => {
       paymentData,
     } = req.body;
 
-    // Validate required fields
-    if (!childData || !childData.fullName) {
-      return res.status(400).json({ message: "الاسم الكامل للطفل مطلوب" });
-    }
-    if (!childData.gender) {
-      return res.status(400).json({ message: "نوع الطفل مطلوب" });
-    }
-    if (!childData.dateOfBirth) {
-      return res.status(400).json({ message: "تاريخ ميلاد الطفل مطلوب" });
-    }
-    if (!sportId) {
-      return res.status(400).json({ message: "الرياضة مطلوبة" });
-    }
-    if (!groupId) {
-      return res.status(400).json({ message: "المجموعة مطلوبة" });
-    }
-    if (!memberType) {
-      return res.status(400).json({ message: "نوع العضوية مطلوب" });
-    }
-    if (!durationMonths) {
-      return res.status(400).json({ message: "المدة مطلوبة" });
-    }
-    if (!startDate) {
-      return res.status(400).json({ message: "تاريخ البداية مطلوب" });
-    }
-    if (!paymentData || !paymentData.amount) {
-      return res.status(400).json({ message: "بيانات الدفع غير صحيحة" });
-    }
+    if (!childData?.fullName)
+      return res
+        .status(400)
+        .json({ success: false, message: "اسم الطفل مطلوب" });
+    if (!childData?.gender)
+      return res.status(400).json({ success: false, message: "الجنس مطلوب" });
+    if (!childData?.dateOfBirth)
+      return res
+        .status(400)
+        .json({ success: false, message: "تاريخ الميلاد مطلوب" });
+    if (!sportId)
+      return res
+        .status(400)
+        .json({ success: false, message: "الرياضة مطلوبة" });
+    if (!groupId)
+      return res
+        .status(400)
+        .json({ success: false, message: "المجموعة مطلوبة" });
+    if (!durationMonths)
+      return res.status(400).json({ success: false, message: "المدة مطلوبة" });
+    if (!startDate)
+      return res
+        .status(400)
+        .json({ success: false, message: "تاريخ البداية مطلوب" });
+
+    const { createAcademySubscription } = require("../services/academyService");
 
     const result = await createAcademySubscription({
       childData,
       sportId,
       groupId,
-      memberType,
-      parentSubscriptionId:
-        memberType === "linked" ? parentSubscriptionId : null,
+      memberType: memberType || "standalone",
+      parentSubscriptionId: parentSubscriptionId || null,
       durationMonths: parseInt(durationMonths),
-      startDate,
-      paymentData,
+      startDate: new Date(startDate),
+      paymentData: {
+        amount: paymentData?.amount || 0,
+        method: paymentData?.method || "cash",
+      },
       userId: req.user._id,
     });
 
-    res.status(201).json({
-      message: "تم إنشاء الاشتراك بنجاح",
-      subscription: result.subscription,
-      child: result.child,
-    });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "تم إنشاء الاشتراك بنجاح",
+        data: result,
+      });
   } catch (error) {
-    next(error);
+    console.error("ACADEMY SUB ERROR:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 

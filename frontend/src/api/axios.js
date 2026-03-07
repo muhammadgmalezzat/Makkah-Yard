@@ -8,7 +8,14 @@ const instance = axios.create({
 // Request interceptor to add token
 instance.interceptors.request.use(
   (config) => {
-    const { token } = useAuthStore.getState();
+    const authStore = useAuthStore.getState();
+    let token = authStore.token;
+
+    // Fallback to localStorage if Zustand store is empty
+    if (!token) {
+      token = localStorage.getItem("auth_token");
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

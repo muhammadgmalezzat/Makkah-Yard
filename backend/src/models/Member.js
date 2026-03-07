@@ -18,16 +18,19 @@ const memberSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      sparse: true,
-      unique: true,
+      default: undefined,
+      trim: true,
     },
     email: {
       type: String,
+      default: undefined,
+      lowercase: true,
+      trim: true,
     },
     nationalId: {
       type: String,
-      sparse: true,
-      unique: true,
+      default: undefined,
+      trim: true,
     },
     gender: {
       type: String,
@@ -58,5 +61,9 @@ memberSchema.virtual("age").get(function () {
     (new Date() - this.dateOfBirth) / (365.25 * 24 * 60 * 60 * 1000),
   );
 });
+
+// Sparse unique indexes - allows multiple absent/undefined values
+memberSchema.index({ phone: 1 }, { unique: true, sparse: true });
+memberSchema.index({ nationalId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("Member", memberSchema);

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
+    "dev": "nodemon --ext js,json server.js",
     "seed": "node src/seeds/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -22,5 +22,9 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.3",
     "morgan": "^1.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "nodemon": "^3.0.2"
   }
 }

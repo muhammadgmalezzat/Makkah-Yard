@@ -3,14 +3,14 @@ const errorHandler = (err, req, res, next) => {
 
   // Mongoose duplicate key error
   if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern)[0];
-    const fieldNames = {
-      email: "البريد الإلكتروني",
-      phone: "رقم الهاتف",
-      nationalId: "رقم الهوية الوطنية",
+    const field = Object.keys(err.keyPattern || err.keyValue || {})[0];
+    const fieldMessages = {
+      phone: "رقم الهاتف مسجل مسبقاً",
+      nationalId: "رقم الهوية مسجل مسبقاً",
+      email: "البريد الإلكتروني مسجل مسبقاً",
     };
-    const fieldName = fieldNames[field] || field;
-    return res.status(400).json({ message: `${fieldName} موجود بالفعل` });
+    const message = fieldMessages[field] || "هذه البيانات مسجلة مسبقاً";
+    return res.status(400).json({ message });
   }
 
   // Mongoose validation error
