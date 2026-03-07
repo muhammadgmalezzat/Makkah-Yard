@@ -145,54 +145,58 @@ const searchSubscriptions = async (req, res, next) => {
   try {
     const { q } = req.query;
 
-    if (!q || q.trim().length === 0) {
-      return res.json([]);
+    if (!q || q.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "ادخل اسم أو رقم هاتف",
+      });
     }
 
     // Search members by name or phone
     const members = await Member.find({
       $or: [
-        { fullName: { $regex: q, $options: "i" } },
-        { phone: { $regex: q, $options: "i" } },
+        { fullName: { $regex: q.trim(), $options: "i" } },
+        { phone: { $regex: q.trim(), $options: "i" } },
       ],
-    });
-
-    // Get subscriptions for these members
-    const memberIds = members.map((m) => m._id);
-    const Package = require("../models/Package");
-
-    // Find active sub_adult packages first
-    const subAdultPackages = await Package.find({
-      category: "sub_adult",
       isActive: true,
-    }).select("_id");
+    }).limit(20);
 
-    const packageIds = subAdultPackages.map((p) => p._id);
+    console.log("Members found:", members.length);
 
-    const subscriptions = await Subscription.find({
-      memberId: { $in: memberIds },
-      packageId: { $in: packageIds },
-      status: "active",
-    })
-      .populate("memberId", "fullName phone")
-      .populate("packageId", "name price durationMonths category")
-      .sort({ createdAt: -1 })
-      .limit(20);
+    const AcademySubscription = require("../models/AcademySubscription");
 
-    // Format results
-    const results = subscriptions
-      .filter((sub) => sub.memberId && sub.packageId)
-      .map((sub) => ({
-        id: sub._id,
-        memberName: sub.memberId?.fullName || "Unknown",
-        phone: sub.memberId?.phone || "-",
-        packageName: sub.packageId?.name || "Unknown",
-        status: sub.status,
-        endDate: sub.endDate,
-        subscriptionId: sub._id,
-      }));
+    // Get subscriptions for each member
+    const results = await Promise.all(
+      members.map(async (member) => {
+        // Check regular subscription first
+        const lastSub = await Subscription.findOne({ memberId: member._id })
+          .sort({ createdAt: -1 })
+          .populate("packageId", "name category durationMonths price");
 
-    res.json(results);
+        // Check academy subscription if no regular sub found
+        const lastAcademySub = await AcademySubscription.findOne({
+          memberId: member._id,
+        })
+          .sort({ createdAt: -1 })
+          .populate("sportId", "name nameEn")
+          .populate("groupId", "name schedule");
+
+        return {
+          member,
+          lastSubscription: lastSub || null,
+          lastAcademySubscription: lastAcademySub || null,
+          subscriptionType: lastSub ? "gym" : lastAcademySub ? "academy" : null,
+        };
+      })
+    );
+
+    console.log("Results:", results.length);
+
+    res.json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
   } catch (error) {
     next(error);
   }
