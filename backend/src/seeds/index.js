@@ -12,6 +12,10 @@ const seed = async () => {
   await connectDB();
   console.log("Connected to MongoDB");
 
+  // Drop member indexes to fix sparse index issues with null values
+  await mongoose.connection.collection("members").dropIndexes();
+  console.log("✓ Dropped member indexes - will be recreated automatically");
+
   // Clear existing data
   await Package.deleteMany({});
   await User.deleteMany({});
@@ -19,8 +23,8 @@ const seed = async () => {
   console.log("Cleared existing data");
 
   // Insert packages
-  await Package.insertMany(packagesData);
-  console.log("✓ Inserted 20 packages");
+  const insertedPackages = await Package.insertMany(packagesData);
+  console.log(`✓ Inserted ${insertedPackages.length} packages`);
 
   // Insert sports
   const sports = [

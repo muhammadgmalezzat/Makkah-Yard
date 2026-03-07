@@ -368,8 +368,10 @@ export default function AddSubMember() {
           />
 
           {accountError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              ⚠️ {accountError}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <p className="text-red-700 text-sm font-medium">
+                ❌ {accountError}
+              </p>
             </div>
           )}
 
@@ -425,8 +427,8 @@ export default function AddSubMember() {
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          ⚠️ {error}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <p className="text-red-700 text-sm font-medium">❌ {error}</p>
         </div>
       )}
 

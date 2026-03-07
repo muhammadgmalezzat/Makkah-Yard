@@ -8,6 +8,14 @@ const Subscription = require("../models/Subscription");
 const Payment = require("../models/Payment");
 const AuditLog = require("../models/AuditLog");
 
+// Sanitize function: convert empty strings and null to undefined
+// This prevents null values in sparse unique indexes (mongoDB sparse indexes don't allow multiple nulls)
+const sanitize = (val) => {
+  if (val === null || val === undefined) return undefined;
+  if (typeof val === "string" && val.trim() === "") return undefined;
+  return typeof val === "string" ? val.trim() : val;
+};
+
 const createAcademySubscription = async ({
   childData,
   sportId,
@@ -19,12 +27,9 @@ const createAcademySubscription = async ({
   paymentData,
   userId,
 }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // 1. Find and validate sport
-    const sport = await Sport.findById(sportId).session(session);
+    const sport = await Sport.findById(sportId);
     if (!sport) {
       throw new Error("الرياضة غير موجودة");
     }
@@ -33,7 +38,7 @@ const createAcademySubscription = async ({
     }
 
     // 2. Find and validate group
-    const group = await AcademyGroup.findById(groupId).session(session);
+    const group = await AcademyGroup.findById(groupId);
     if (!group) {
       throw new Error("المجموعة غير موجودة");
     }
@@ -77,8 +82,7 @@ const createAcademySubscription = async ({
         throw new Error("معرف الاشتراك الأب مطلوب للأعضاء المرتبطين");
       }
 
-      parentSub =
-        await Subscription.findById(parentSubscriptionId).session(session);
+      parentSub = await Subscription.findById(parentSubscriptionId);
       if (!parentSub) {
         throw new Error("اشتراك ولي الأمر غير موجود");
       }
@@ -101,25 +105,51 @@ const createAcademySubscription = async ({
       throw new Error("السعر غير صحيح");
     }
 
-    // 8. Create or find Member
+    // 7. Create or find Member
     let child;
-    if (childData.phone) {
+
+    // Sanitize child data to convert empty strings and null to undefined
+    const sanitizedChildData = {
+      ...childData,
+      phone: sanitize(childData.phone),
+      email: sanitize(childData.email),
+      nationalId: sanitize(childData.nationalId),
+      guardianName: sanitize(childData.guardianName),
+      guardianPhone: sanitize(childData.guardianPhone),
+    };
+
+    if (sanitizedChildData.phone) {
       child = await Member.findOne({
-        phone: childData.phone,
+        phone: sanitizedChildData.phone,
         role: "child",
-      }).session(session);
+      });
     }
 
+    let childAccount = null;
     if (!child) {
+      // Create a temporary account for the child
+      const [newChildAccount] = await Account.create([
+        {
+          type: memberType === "linked" ? "family" : "academy_only",
+          status: "active",
+          createdBy: userId,
+        },
+      ]);
+      childAccount = newChildAccount;
+
       child = new Member({
-        ...childData,
+        ...sanitizedChildData,
+        accountId: childAccount._id,
         role: "child",
         guardianAccountId: null,
       });
-      await child.save({ session });
+      await child.save();
+    } else {
+      // If child exists, get their account
+      childAccount = await Account.findById(child.accountId);
     }
 
-    // 9. Create AcademySubscription
+    // 8. Create AcademySubscription
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(startDateObj);
     endDateObj.setMonth(endDateObj.getMonth() + durationMonths);
@@ -140,26 +170,30 @@ const createAcademySubscription = async ({
       renewalCount: 0,
       createdBy: userId,
     });
-    await academySubscription.save({ session });
+    await academySubscription.save();
 
-    // 10. Increment group currentCount
-    await AcademyGroup.findByIdAndUpdate(
-      groupId,
-      { $inc: { currentCount: 1 } },
-      { session },
-    );
-
-    // Create payment record
-    const payment = new Payment({
-      subscriptionId: academySubscription._id,
-      memberId: child._id,
-      amount,
-      method: paymentData.method || "cash",
-      type: "new",
-      paidAt: new Date(paymentData.paidAt || new Date()),
-      createdBy: userId,
+    // 9. Increment group currentCount
+    await AcademyGroup.findByIdAndUpdate(groupId, {
+      $inc: { currentCount: 1 },
     });
-    await payment.save({ session });
+
+    // 10. Create payment record
+    console.log("userId in service:", userId);
+    console.log("payment data:", { amount, method: paymentData.method });
+    await Payment.create([
+      {
+        subscriptionId: academySubscription._id,
+        memberId: child._id,
+        amount,
+        method: paymentData.method || "cash",
+        type: "new",
+        paidAt: new Date(),
+        createdBy: userId,
+      },
+    ]);
+    const payment = await Payment.findOne({
+      subscriptionId: academySubscription._id,
+    });
 
     // 11. Create AuditLog
     const auditLog = new AuditLog({
@@ -168,27 +202,47 @@ const createAcademySubscription = async ({
       performedBy: userId,
       after: {
         subscription: academySubscription.toObject(),
-        child: child.toObject(),
+        member: child.toObject(),
         sport: sport.toObject(),
         group: group.toObject(),
       },
     });
-    await auditLog.save({ session });
+    await auditLog.save();
 
-    await session.commitTransaction();
-
+    // 12. Return properly structured response
     return {
-      subscription: academySubscription,
-      child,
-      sport,
-      group,
-      payment,
+      member: {
+        _id: child._id,
+        fullName: child.fullName,
+        gender: child.gender,
+        dateOfBirth: child.dateOfBirth,
+      },
+      subscription: {
+        _id: academySubscription._id,
+        startDate: academySubscription.startDate,
+        endDate: academySubscription.endDate,
+        durationMonths: academySubscription.durationMonths,
+        pricePaid: academySubscription.pricePaid,
+        paymentMethod: academySubscription.paymentMethod,
+        status: academySubscription.status,
+      },
+      sport: {
+        _id: sport._id,
+        name: sport.name,
+        nameEn: sport.nameEn,
+      },
+      group: {
+        _id: group._id,
+        name: group.name,
+        schedule: group.schedule,
+      },
+      account: {
+        _id: childAccount._id,
+        type: childAccount.type,
+      },
     };
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
@@ -199,14 +253,11 @@ const changeSport = async ({
   newGroupId,
   userId,
 }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // 1. Get current subscription
     const oldSubscription = await AcademySubscription.findById(
       academySubscriptionId,
-    ).session(session);
+    );
     if (!oldSubscription) {
       throw new Error("الاشتراك غير موجود");
     }
@@ -215,15 +266,13 @@ const changeSport = async ({
     }
 
     // 2. Get member to validate age/gender
-    const member = await Member.findById(oldSubscription.memberId).session(
-      session,
-    );
+    const member = await Member.findById(oldSubscription.memberId);
     if (!member) {
       throw new Error("الطفل غير موجود");
     }
 
     // 3. Validate new sport
-    const newSport = await Sport.findById(newSportId).session(session);
+    const newSport = await Sport.findById(newSportId);
     if (!newSport) {
       throw new Error("الرياضة الجديدة غير موجودة");
     }
@@ -258,7 +307,7 @@ const changeSport = async ({
     }
 
     // 6. Validate new group
-    const newGroup = await AcademyGroup.findById(newGroupId).session(session);
+    const newGroup = await AcademyGroup.findById(newGroupId);
     if (!newGroup) {
       throw new Error("المجموعة الجديدة غير موجودة");
     }
@@ -268,14 +317,12 @@ const changeSport = async ({
 
     // 7. Cancel old subscription (soft delete)
     oldSubscription.status = "cancelled";
-    await oldSubscription.save({ session });
+    await oldSubscription.save();
 
     // 8. Decrement old group count
-    await AcademyGroup.findByIdAndUpdate(
-      oldSubscription.groupId,
-      { $inc: { currentCount: -1 } },
-      { session },
-    );
+    await AcademyGroup.findByIdAndUpdate(oldSubscription.groupId, {
+      $inc: { currentCount: -1 },
+    });
 
     // 9. Create new subscription with same dates and duration
     const newSubscription = new AcademySubscription({
@@ -293,14 +340,12 @@ const changeSport = async ({
       renewalCount: oldSubscription.renewalCount,
       createdBy: userId,
     });
-    await newSubscription.save({ session });
+    await newSubscription.save();
 
     // 10. Increment new group count
-    await AcademyGroup.findByIdAndUpdate(
-      newGroupId,
-      { $inc: { currentCount: 1 } },
-      { session },
-    );
+    await AcademyGroup.findByIdAndUpdate(newGroupId, {
+      $inc: { currentCount: 1 },
+    });
 
     // 11. Create AuditLog
     const auditLog = new AuditLog({
@@ -317,9 +362,7 @@ const changeSport = async ({
         groupId: newGroupId,
       },
     });
-    await auditLog.save({ session });
-
-    await session.commitTransaction();
+    await auditLog.save();
 
     return {
       oldSubscription,
@@ -329,23 +372,17 @@ const changeSport = async ({
       group: newGroup,
     };
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
 // ============ CHANGE GROUP ============
 const changeGroup = async ({ academySubscriptionId, newGroupId, userId }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // 1. Get current subscription
     const subscription = await AcademySubscription.findById(
       academySubscriptionId,
-    ).session(session);
+    );
     if (!subscription) {
       throw new Error("الاشتراك غير موجود");
     }
@@ -354,7 +391,7 @@ const changeGroup = async ({ academySubscriptionId, newGroupId, userId }) => {
     }
 
     // 2. Validate new group exists and is same sport
-    const newGroup = await AcademyGroup.findById(newGroupId).session(session);
+    const newGroup = await AcademyGroup.findById(newGroupId);
     if (!newGroup) {
       throw new Error("المجموعة الجديدة غير موجودة");
     }
@@ -366,28 +403,22 @@ const changeGroup = async ({ academySubscriptionId, newGroupId, userId }) => {
     }
 
     // 3. Get old group
-    const oldGroup = await AcademyGroup.findById(subscription.groupId).session(
-      session,
-    );
+    const oldGroup = await AcademyGroup.findById(subscription.groupId);
 
     // 4. Update subscription
     const oldGroupId = subscription.groupId;
     subscription.groupId = newGroupId;
-    await subscription.save({ session });
+    await subscription.save();
 
     // 5. Decrement old group count
-    await AcademyGroup.findByIdAndUpdate(
-      oldGroupId,
-      { $inc: { currentCount: -1 } },
-      { session },
-    );
+    await AcademyGroup.findByIdAndUpdate(oldGroupId, {
+      $inc: { currentCount: -1 },
+    });
 
     // 6. Increment new group count
-    await AcademyGroup.findByIdAndUpdate(
-      newGroupId,
-      { $inc: { currentCount: 1 } },
-      { session },
-    );
+    await AcademyGroup.findByIdAndUpdate(newGroupId, {
+      $inc: { currentCount: 1 },
+    });
 
     // 7. Create AuditLog
     const auditLog = new AuditLog({
@@ -402,9 +433,7 @@ const changeGroup = async ({ academySubscriptionId, newGroupId, userId }) => {
         groupId: newGroupId,
       },
     });
-    await auditLog.save({ session });
-
-    await session.commitTransaction();
+    await auditLog.save();
 
     return {
       subscription,
@@ -412,10 +441,7 @@ const changeGroup = async ({ academySubscriptionId, newGroupId, userId }) => {
       newGroup,
     };
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 
@@ -431,18 +457,15 @@ const addSportToChild = async ({
   parentSubscriptionId,
   userId,
 }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     // 1. Get member
-    const member = await Member.findById(memberId).session(session);
+    const member = await Member.findById(memberId);
     if (!member) {
       throw new Error("الطفل غير موجود");
     }
 
     // 2. Validate sport
-    const sport = await Sport.findById(sportId).session(session);
+    const sport = await Sport.findById(sportId);
     if (!sport) {
       throw new Error("الرياضة غير موجودة");
     }
@@ -480,7 +503,7 @@ const addSportToChild = async ({
     }
 
     // 5. Validate group
-    const group = await AcademyGroup.findById(groupId).session(session);
+    const group = await AcademyGroup.findById(groupId);
     if (!group) {
       throw new Error("المجموعة غير موجودة");
     }
@@ -494,8 +517,7 @@ const addSportToChild = async ({
         throw new Error("معرف الاشتراك الأب مطلوب للأعضاء المرتبطين");
       }
 
-      const parentSub =
-        await Subscription.findById(parentSubscriptionId).session(session);
+      const parentSub = await Subscription.findById(parentSubscriptionId);
       if (!parentSub) {
         throw new Error("اشتراك ولي الأمر غير موجود");
       }
@@ -538,26 +560,29 @@ const addSportToChild = async ({
       renewalCount: 0,
       createdBy: userId,
     });
-    await academySubscription.save({ session });
+    await academySubscription.save();
 
     // 9. Increment group currentCount
-    await AcademyGroup.findByIdAndUpdate(
-      groupId,
-      { $inc: { currentCount: 1 } },
-      { session },
-    );
+    await AcademyGroup.findByIdAndUpdate(groupId, {
+      $inc: { currentCount: 1 },
+    });
 
     // 10. Create payment record
-    const payment = new Payment({
+    console.log("userId in service (addSportToChild):", userId);
+    await Payment.create([
+      {
+        subscriptionId: academySubscription._id,
+        memberId,
+        amount,
+        method: paymentData.method || "cash",
+        type: "new",
+        paidAt: new Date(),
+        createdBy: userId,
+      },
+    ]);
+    const payment = await Payment.findOne({
       subscriptionId: academySubscription._id,
-      memberId,
-      amount,
-      method: paymentData.method || "cash",
-      type: "new",
-      paidAt: new Date(paymentData.paidAt || new Date()),
-      createdBy: userId,
     });
-    await payment.save({ session });
 
     // 11. Create AuditLog
     const auditLog = new AuditLog({
@@ -572,9 +597,7 @@ const addSportToChild = async ({
         group: group.toObject(),
       },
     });
-    await auditLog.save({ session });
-
-    await session.commitTransaction();
+    await auditLog.save();
 
     return {
       subscription: academySubscription,
@@ -584,10 +607,7 @@ const addSportToChild = async ({
       payment,
     };
   } catch (error) {
-    await session.abortTransaction();
     throw error;
-  } finally {
-    session.endSession();
   }
 };
 

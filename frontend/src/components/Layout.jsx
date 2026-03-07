@@ -5,11 +5,6 @@ const navItems = [
   { to: "/dashboard", label: "لوحة التحكم", icon: "⊞" },
   { to: "/subscriptions/new", label: "اشتراك جديد", icon: "＋" },
   {
-    to: "/subscriptions/academy-only",
-    label: "أكاديمية (غير مشترك)",
-    icon: "🏃",
-  },
-  {
     to: "/subscriptions/add-sub-member",
     label: "إضافة عضو فرعي",
     icon: "👤",

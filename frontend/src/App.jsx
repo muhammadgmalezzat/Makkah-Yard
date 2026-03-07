@@ -8,7 +8,6 @@ import PackagesPage from "./pages/PackagesPage";
 import NewSubscriptionPage from "./pages/NewSubscriptionPage";
 import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
 import RenewSubscriptionPage from "./pages/RenewSubscriptionPage";
-import AcademyOnlySubscription from "./pages/AcademyOnlySubscription";
 import AddSubMember from "./pages/AddSubMember";
 import SportsManagement from "./pages/academy/SportsManagement";
 import GroupsManagement from "./pages/academy/GroupsManagement";
@@ -39,10 +38,6 @@ function App() {
             <Route
               path="/subscriptions/new"
               element={<NewSubscriptionPage />}
-            />
-            <Route
-              path="/subscriptions/academy-only"
-              element={<AcademyOnlySubscription />}
             />
             <Route
               path="/subscriptions/add-sub-member"
