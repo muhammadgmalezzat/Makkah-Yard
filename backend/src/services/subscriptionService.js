@@ -4,6 +4,11 @@ const Subscription = require("../models/Subscription");
 const Payment = require("../models/Payment");
 const AuditLog = require("../models/AuditLog");
 
+// Sanitize function: convert empty strings and null to undefined
+// This prevents null values in sparse unique indexes (mongoDB sparse indexes don't allow multiple nulls)
+const sanitize = (val) =>
+  val && val.toString().trim() !== "" ? val.trim() : undefined;
+
 const createNewSubscription = async ({
   memberData,
   packageData,
@@ -22,6 +27,9 @@ const createNewSubscription = async ({
     const member = new Member({
       accountId: account._id,
       ...memberData,
+      phone: sanitize(memberData.phone),
+      email: sanitize(memberData.email),
+      nationalId: sanitize(memberData.nationalId),
       role: "primary",
     });
     await member.save();
@@ -116,6 +124,9 @@ const createFriendsSubscription = async ({
     const primaryMember = new Member({
       accountId: account._id,
       ...primaryData,
+      phone: sanitize(primaryData.phone),
+      email: sanitize(primaryData.email),
+      nationalId: sanitize(primaryData.nationalId),
       role: "primary",
     });
     await primaryMember.save();
@@ -124,6 +135,9 @@ const createFriendsSubscription = async ({
     const partnerMember = new Member({
       accountId: account._id,
       ...partnerData,
+      phone: sanitize(partnerData.phone),
+      email: sanitize(partnerData.email),
+      nationalId: sanitize(partnerData.nationalId),
       role: "partner",
     });
     await partnerMember.save();
@@ -236,6 +250,9 @@ const createFamilySubscription = async ({
     const primaryMember = new Member({
       accountId: account._id,
       ...primaryData,
+      phone: sanitize(primaryData.phone),
+      email: sanitize(primaryData.email),
+      nationalId: sanitize(primaryData.nationalId),
       role: "primary",
     });
     await primaryMember.save();
@@ -246,6 +263,9 @@ const createFamilySubscription = async ({
       partnerMember = new Member({
         accountId: account._id,
         ...partnerData,
+        phone: sanitize(partnerData.phone),
+        email: sanitize(partnerData.email),
+        nationalId: sanitize(partnerData.nationalId),
         role: "partner",
       });
       await partnerMember.save();
@@ -499,6 +519,9 @@ const createAcademyOnlySubscription = async ({
     const child = new Member({
       accountId: account._id,
       ...childData,
+      phone: sanitize(childData.phone),
+      email: sanitize(childData.email),
+      nationalId: sanitize(childData.nationalId),
       role: "child",
       guardianAccountId: null,
     });
@@ -689,6 +712,9 @@ const addSubMemberToFamily = async ({
     const member = new Member({
       accountId: accountId,
       ...memberData,
+      phone: sanitize(memberData.phone),
+      email: sanitize(memberData.email),
+      nationalId: sanitize(memberData.nationalId),
       role: pkg.category === "sub_child" ? "child" : "partner",
       guardianAccountId: accountId,
     });

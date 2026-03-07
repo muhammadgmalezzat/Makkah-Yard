@@ -2,7 +2,7 @@ const Package = require("../models/Package");
 
 const getPackages = async (req, res, next) => {
   try {
-    const { category, sport } = req.query;
+    const { category, sport, isFlexibleDuration } = req.query;
 
     let filter = { isActive: true };
 
@@ -12,6 +12,10 @@ const getPackages = async (req, res, next) => {
 
     if (sport) {
       filter.sport = sport;
+    }
+
+    if (isFlexibleDuration !== undefined) {
+      filter.isFlexibleDuration = isFlexibleDuration === "true";
     }
 
     const packages = await Package.find(filter).sort({ category: 1, price: 1 });
