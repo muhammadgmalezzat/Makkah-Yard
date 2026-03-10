@@ -39,6 +39,7 @@ export default function AddSubMember() {
   });
 
   const [calculatedAge, setCalculatedAge] = useState(null);
+  const [parentSubscriptionId, setParentSubscriptionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -87,16 +88,23 @@ export default function AddSubMember() {
         const response = await axios.get(
           `/subscriptions/search?q=${encodeURIComponent(searchQuery)}`,
         );
-        // Filter for family accounts only
-        const familyResults = response.data.filter((sub) => {
-          // We need to fetch account details to check type
-          // For now, we'll get all and verify later
-          return true;
-        });
-        setSearchResults(response.data);
+        console.log("Search response:", response.data);
+
+        // Extract array from response.data.data
+        const allResults = response.data.data || [];
+
+        // Filter to show only primary members with active gym subscriptions
+        const familyResults = allResults.filter(
+          (r) =>
+            r.member?.role === "primary" &&
+            r.lastSubscription?.status === "active",
+        );
+
+        setSearchResults(familyResults);
         setShowSearchResults(true);
       } catch (err) {
         console.error("Search failed", err);
+        setSearchResults([]);
       }
     };
 
@@ -128,9 +136,13 @@ export default function AddSubMember() {
     setAccountError("");
     setError("");
     try {
-      const subDetails = await axios.get(
-        `/subscriptions/${result.subscriptionId}`,
-      );
+      const subscriptionId = result.lastSubscription?._id;
+      if (!subscriptionId) {
+        setAccountError("معرف الاشتراك غير موجود");
+        return;
+      }
+
+      const subDetails = await axios.get(`/subscriptions/${subscriptionId}`);
       const subscription = subDetails.data;
 
       // Verify it's a family account
@@ -140,6 +152,7 @@ export default function AddSubMember() {
       }
 
       setSelectedAccount(subscription.accountId._id);
+      setParentSubscriptionId(subscriptionId);
       setPrimaryMember(subscription.memberId);
       setSearchQuery("");
       setShowSearchResults(false);
@@ -377,19 +390,24 @@ export default function AddSubMember() {
 
           {showSearchResults && searchResults.length > 0 && (
             <div className="space-y-2">
-              {searchResults.map((result) => (
-                <button
-                  key={result.subscriptionId}
-                  onClick={() => handleSelectAccount(result)}
-                  className="w-full p-3 text-right border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition"
-                >
-                  <div className="font-semibold">{result.memberName}</div>
-                  <div className="text-sm text-gray-600">{result.phone}</div>
-                  <div className="text-sm text-gray-500">
-                    {result.packageName}
-                  </div>
-                </button>
-              ))}
+              {searchResults.map((result) => {
+                const memberName = result.member?.fullName || "Unknown";
+                const phone = result.member?.phone || "-";
+                const packageName =
+                  result.lastSubscription?.packageId?.name || "لا يوجد";
+
+                return (
+                  <button
+                    key={result.lastSubscription?._id || result.member?._id}
+                    onClick={() => handleSelectAccount(result)}
+                    className="w-full p-3 text-right border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition"
+                  >
+                    <div className="font-semibold">{memberName}</div>
+                    <div className="text-sm text-gray-600">{phone}</div>
+                    <div className="text-sm text-gray-500">{packageName}</div>
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -454,7 +472,15 @@ export default function AddSubMember() {
             </button>
 
             <button
-              onClick={() => setMemberType("sub_child")}
+              onClick={() =>
+                navigate("/academy/new", {
+                  state: {
+                    memberType: "linked",
+                    parentSubscriptionId: parentSubscriptionId,
+                    parentAccountId: selectedAccount,
+                  },
+                })
+              }
               className={`p-6 rounded-lg border-2 text-center transition ${
                 memberType === "sub_child"
                   ? "border-blue-600 bg-blue-50"
@@ -662,6 +688,35 @@ export default function AddSubMember() {
                   العمر: {calculatedAge} سنة
                 </div>
               )}
+
+              {memberType === "sub_child" &&
+                calculatedAge !== null &&
+                calculatedAge < 15 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                    <p className="text-blue-800 font-medium mb-3">
+                      العضو تحت 15 سنة — يجب تسجيله عبر الأكاديمية
+                    </p>
+                    <button
+                      onClick={() =>
+                        navigate("/academy/new", {
+                          state: {
+                            memberType: "linked",
+                            parentSubscriptionId: parentSubscriptionId,
+                            parentAccountId: selectedAccount,
+                            prefillChild: {
+                              fullName: memberData.fullName,
+                              gender: memberData.gender,
+                              dateOfBirth: memberData.dateOfBirth,
+                            },
+                          },
+                        })
+                      }
+                      className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+                    >
+                      الانتقال لتسجيل اشتراك أكاديمية ←
+                    </button>
+                  </div>
+                )}
             </div>
           )}
 
@@ -772,31 +827,38 @@ export default function AddSubMember() {
       )}
 
       {/* Buttons */}
-      <div className="flex justify-between gap-4 mt-6">
-        {step > 0 && (
+      {!(
+        step === 3 &&
+        memberType === "sub_child" &&
+        calculatedAge !== null &&
+        calculatedAge < 15
+      ) && (
+        <div className="flex justify-between gap-4 mt-6">
+          {step > 0 && (
+            <button
+              onClick={() => setStep(step - 1)}
+              className="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+            >
+              السابق
+            </button>
+          )}
           <button
-            onClick={() => setStep(step - 1)}
-            className="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+            onClick={handleSubmit}
+            disabled={loading || exceedsEndDate}
+            className={`flex-1 px-6 py-2 rounded-lg text-white ${
+              exceedsEndDate
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            }`}
           >
-            السابق
+            {loading
+              ? "جاري المعالجة..."
+              : step === 4
+                ? "إضافة العضو الفرعي"
+                : "التالي"}
           </button>
-        )}
-        <button
-          onClick={handleSubmit}
-          disabled={loading || exceedsEndDate}
-          className={`flex-1 px-6 py-2 rounded-lg text-white ${
-            exceedsEndDate
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          }`}
-        >
-          {loading
-            ? "جاري المعالجة..."
-            : step === 4
-              ? "إضافة العضو الفرعي"
-              : "التالي"}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
