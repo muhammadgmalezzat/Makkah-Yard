@@ -10,6 +10,9 @@ const {
 // POST /api/academy/subscriptions - create new academy subscription
 const createSubscriptionCtrl = async (req, res) => {
   try {
+    console.log("=== CONTROLLER RECEIVED ===");
+    console.log("memberType:", req.body.memberType);
+    console.log("parentSubscriptionId:", req.body.parentSubscriptionId);
     console.log("BODY:", JSON.stringify(req.body, null, 2));
     console.log("USER:", req.user);
 
@@ -70,13 +73,11 @@ const createSubscriptionCtrl = async (req, res) => {
       userId: req.user._id,
     });
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "تم إنشاء الاشتراك بنجاح",
-        data: result,
-      });
+    res.status(201).json({
+      success: true,
+      message: "تم إنشاء الاشتراك بنجاح",
+      data: result,
+    });
   } catch (error) {
     console.error("ACADEMY SUB ERROR:", error.message);
     res.status(400).json({ success: false, message: error.message });

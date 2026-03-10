@@ -6,6 +6,7 @@ const {
   getSubscriptionDetails,
   newAcademyOnlySubscription,
   addSubMemberHandler,
+  getAccountProfile,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
@@ -33,6 +34,14 @@ router.post(
   protect,
   allowRoles("reception", "supervisor", "admin", "owner"),
   addSubMemberHandler,
+);
+
+// Get account profile
+router.get(
+  "/account-profile/:accountId",
+  protect,
+  allowRoles("reception", "supervisor", "admin", "owner"),
+  getAccountProfile,
 );
 
 // Search subscriptions
