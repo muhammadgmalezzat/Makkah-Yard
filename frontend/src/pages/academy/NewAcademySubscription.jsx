@@ -14,6 +14,7 @@ export default function NewAcademySubscription() {
   // Step 1: Child Type
   const [childType, setChildType] = useState("");
   const [parentAccount, setParentAccount] = useState(null);
+  const [parentSubscriptionId, setParentSubscriptionId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -53,6 +54,32 @@ export default function NewAcademySubscription() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
+
+  // Check if coming from AddSubMember with pre-selected parent account
+  useEffect(() => {
+    if (!location.state) return;
+
+    if (location.state.memberType === "linked") {
+      setChildType("linked");
+      setParentSubscriptionId(location.state.parentSubscriptionId);
+      console.log("Set from navigation:", {
+        memberType: "linked",
+        parentSubscriptionId: location.state.parentSubscriptionId,
+      });
+      // Skip step 1 (type selection) and go directly to step 2
+      setStep(2);
+    }
+
+    if (location.state.prefillChild) {
+      setChildData((prev) => ({
+        ...prev,
+        fullName: location.state.prefillChild.fullName || "",
+        gender: location.state.prefillChild.gender || "",
+        dateOfBirth: location.state.prefillChild.dateOfBirth || "",
+      }));
+      console.log("Prefilled child data:", location.state.prefillChild);
+    }
+  }, [location.state]);
 
   // Fetch sports based on child gender
   const { data: sports = [] } = useQuery({
@@ -222,10 +249,23 @@ export default function NewAcademySubscription() {
         const response = await axios.get(
           `/subscriptions/search?q=${encodeURIComponent(searchQuery)}`,
         );
-        setSearchResults(response.data);
+        console.log("Search response:", response.data);
+
+        // Extract array from response.data.data
+        const allResults = response.data.data || [];
+
+        // Filter to show only primary members with active subscriptions
+        const filtered = allResults.filter(
+          (r) =>
+            r.member?.role === "primary" &&
+            r.lastSubscription?.status === "active",
+        );
+
+        setSearchResults(filtered);
         setShowSearchResults(true);
       } catch (err) {
         console.error("Search error:", err);
+        setSearchResults([]);
       }
     };
 
@@ -243,6 +283,7 @@ export default function NewAcademySubscription() {
 
   const handleSelectParentAccount = (account) => {
     setParentAccount(account);
+    setParentSubscriptionId(account.lastSubscription?._id);
     setSearchQuery("");
     setSearchResults([]);
     setShowSearchResults(false);
@@ -375,7 +416,7 @@ export default function NewAcademySubscription() {
             groupId: selectedGroup._id,
             memberType: childType || "standalone",
             parentSubscriptionId:
-              childType === "linked" ? parentAccount?.subscriptionId : null,
+              childType === "linked" ? parentSubscriptionId : null,
             durationMonths: parseInt(durationMonths),
             startDate: startDate,
             paymentData: {
@@ -384,6 +425,8 @@ export default function NewAcademySubscription() {
             },
           };
 
+          console.log("parentSubscriptionId value:", parentSubscriptionId);
+          console.log("childType value:", childType);
           console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
 
           const response = await axios.post("/academy/subscriptions", payload);
@@ -515,27 +558,38 @@ export default function NewAcademySubscription() {
                       لا توجد نتائج
                     </div>
                   ) : (
-                    searchResults.map((result) => (
-                      <button
-                        key={result.subscriptionId}
-                        onClick={() => handleSelectParentAccount(result)}
-                        className="w-full text-right p-3 border-b hover:bg-blue-50 transition"
-                      >
-                        <p className="font-semibold">{result.memberName}</p>
-                        <p className="text-sm text-gray-600">{result.phone}</p>
-                        <p className="text-sm text-blue-600">
-                          {result.packageName}
-                        </p>
-                      </button>
-                    ))
+                    searchResults.map((result) => {
+                      const memberName = result.member?.fullName || "Unknown";
+                      const phone = result.member?.phone || "-";
+                      const packageName =
+                        result.lastSubscription?.packageId?.name || "لا يوجد";
+
+                      return (
+                        <button
+                          key={
+                            result.lastSubscription?._id || result.member?._id
+                          }
+                          onClick={() => handleSelectParentAccount(result)}
+                          className="w-full text-right p-3 border-b hover:bg-blue-50 transition"
+                        >
+                          <p className="font-semibold">{memberName}</p>
+                          <p className="text-sm text-gray-600">{phone}</p>
+                          <p className="text-sm text-blue-600">{packageName}</p>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               )}
 
               {parentAccount && (
                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-right">
-                  <p className="font-semibold">{parentAccount.memberName}</p>
-                  <p className="text-sm text-gray-600">{parentAccount.phone}</p>
+                  <p className="font-semibold">
+                    {parentAccount.member?.fullName || parentAccount.memberName}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {parentAccount.member?.phone || parentAccount.phone}
+                  </p>
                 </div>
               )}
             </div>
