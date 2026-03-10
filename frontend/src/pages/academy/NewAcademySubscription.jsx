@@ -425,8 +425,11 @@ export default function NewAcademySubscription() {
             },
           };
 
-          console.log("parentSubscriptionId value:", parentSubscriptionId);
-          console.log("childType value:", childType);
+          console.log("=== SENDING TO BACKEND ===");
+          console.log("memberType:", payload.memberType);
+          console.log("parentSubscriptionId:", payload.parentSubscriptionId);
+          console.log("childType state:", childType);
+          console.log("parentSubscriptionId state:", parentSubscriptionId);
           console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
 
           const response = await axios.post("/academy/subscriptions", payload);

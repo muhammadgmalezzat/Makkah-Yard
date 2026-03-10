@@ -8,6 +8,7 @@ import PackagesPage from "./pages/PackagesPage";
 import NewSubscriptionPage from "./pages/NewSubscriptionPage";
 import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
 import RenewSubscriptionPage from "./pages/RenewSubscriptionPage";
+import AccountProfile from "./pages/AccountProfile";
 import AddSubMember from "./pages/AddSubMember";
 import SportsManagement from "./pages/academy/SportsManagement";
 import GroupsManagement from "./pages/academy/GroupsManagement";
@@ -47,6 +48,7 @@ function App() {
               path="/subscriptions/search"
               element={<SearchSubscriptionsPage />}
             />
+            <Route path="/accounts/:accountId" element={<AccountProfile />} />
             <Route
               path="/subscriptions/:subscriptionId/renew"
               element={<RenewSubscriptionPage />}

@@ -1,6 +1,9 @@
 const Subscription = require("../models/Subscription");
 const Member = require("../models/Member");
 const Package = require("../models/Package");
+const Account = require("../models/Account");
+const Payment = require("../models/Payment");
+const AcademySubscription = require("../models/AcademySubscription");
 const {
   createNewSubscription,
   createFriendsSubscription,
@@ -183,11 +186,12 @@ const searchSubscriptions = async (req, res, next) => {
 
         return {
           member,
+          accountId: member.accountId,
           lastSubscription: lastSub || null,
           lastAcademySubscription: lastAcademySub || null,
           subscriptionType: lastSub ? "gym" : lastAcademySub ? "academy" : null,
         };
-      })
+      }),
     );
 
     console.log("Results:", results.length);
@@ -333,6 +337,97 @@ const addSubMemberHandler = async (req, res, next) => {
   }
 };
 
+const getAccountProfile = async (req, res, next) => {
+  try {
+    const { accountId } = req.params;
+
+    console.log("=== getAccountProfile ===");
+    console.log("accountId param:", req.params.accountId);
+    console.log("accountId type:", typeof req.params.accountId);
+
+    // Get account
+    const account = await Account.findById(accountId);
+    if (!account) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الحساب غير موجود" });
+    }
+
+    // Get ALL members in this account
+    const members = await Member.find({ accountId }).sort({ role: 1 });
+    console.log("Members found:", members.length);
+    console.log(
+      "Members:",
+      members.map((m) => ({
+        name: m.fullName,
+        role: m.role,
+        accountId: m.accountId.toString(),
+      })),
+    );
+
+    // Get subscriptions for each member
+    const membersWithSubs = await Promise.all(
+      members.map(async (member) => {
+        const gymSub = await Subscription.findOne({ memberId: member._id })
+          .sort({ createdAt: -1 })
+          .populate("packageId", "name category durationMonths price");
+
+        const academySubs = await AcademySubscription.find({
+          memberId: member._id,
+        })
+          .populate("sportId", "name nameEn")
+          .populate("groupId", "name schedule")
+          .sort({ createdAt: -1 });
+
+        console.log(`Academy subs for ${member.fullName}:`, academySubs.length);
+
+        return {
+          member,
+          gymSubscription: gymSub || null,
+          academySubscriptions: academySubs || [],
+        };
+      }),
+    );
+
+    // Get total payments for this account
+    const allMemberIds = members.map((m) => m._id);
+    const payments = await Payment.find({ memberId: { $in: allMemberIds } })
+      .sort({ createdAt: -1 })
+      .populate("createdBy", "name");
+
+    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Get primary member's active subscription
+    const primaryMember = members.find((m) => m.role === "primary");
+    const primarySub = primaryMember
+      ? await Subscription.findOne({
+          memberId: primaryMember._id,
+          status: "active",
+        }).populate("packageId", "name category durationMonths price")
+      : null;
+
+    res.json({
+      success: true,
+      data: {
+        account,
+        primarySubscription: primarySub,
+        members: membersWithSubs,
+        payments,
+        totalPaid,
+        stats: {
+          totalMembers: members.length,
+          activeMembers: members.filter((m) => m.isActive).length,
+          totalPayments: payments.length,
+          totalPaid,
+          lastPaymentDate: payments[0]?.paidAt || null,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
@@ -340,4 +435,5 @@ module.exports = {
   getSubscriptionDetails,
   newAcademyOnlySubscription,
   addSubMemberHandler,
+  getAccountProfile,
 };

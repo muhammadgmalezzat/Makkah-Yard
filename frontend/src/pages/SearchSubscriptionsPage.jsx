@@ -143,12 +143,10 @@ export default function SearchSubscriptionsPage() {
 
             actionButton = (
               <button
-                onClick={() =>
-                  navigate(`/subscriptions/${subscriptionId}/renew`)
-                }
+                onClick={() => navigate(`/accounts/${result.accountId}`)}
                 className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
               >
-                تجديد الاشتراك
+                عرض الحساب
               </button>
             );
           } else if (subscriptionType === "academy") {
@@ -157,8 +155,10 @@ export default function SearchSubscriptionsPage() {
               label: "أكاديمية",
               classes: "bg-blue-100 text-blue-700",
             };
-            const sportName = result.lastAcademySubscription?.sportId?.name || "رياضة";
-            const groupName = result.lastAcademySubscription?.groupId?.name || "مجموعة";
+            const sportName =
+              result.lastAcademySubscription?.sportId?.name || "رياضة";
+            const groupName =
+              result.lastAcademySubscription?.groupId?.name || "مجموعة";
             const endDate = result.lastAcademySubscription?.endDate;
             const expired = endDate && isExpired(endDate);
             const memberId = result.member?._id;
@@ -200,7 +200,11 @@ export default function SearchSubscriptionsPage() {
 
           return (
             <div
-              key={result.lastSubscription?._id || result.lastAcademySubscription?._id || result.member?._id}
+              key={
+                result.lastSubscription?._id ||
+                result.lastAcademySubscription?._id ||
+                result.member?._id
+              }
               className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition"
             >
               <div className="flex items-start justify-between gap-4 mb-4">
