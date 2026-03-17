@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/auth");
+const { protect, allowRoles } = require("../middleware/auth");
 const Sport = require("../models/Sport");
 const AcademyGroup = require("../models/AcademyGroup");
 const AcademySubscription = require("../models/AcademySubscription");
@@ -14,6 +14,7 @@ const {
   expiringSubscriptionsCtrl,
   activeTodayCtrl,
   dashboardCtrl,
+  updateGroup,
 } = require("../controllers/academyController");
 
 // ============ SPORTS ENDPOINTS ============
@@ -278,51 +279,13 @@ router.post("/groups", protect, async (req, res, next) => {
   }
 });
 
-// PUT /api/academy/groups/:id - update group (admin/owner only)
-router.put("/groups/:id", protect, async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { name, schedule, maxCapacity, isActive } = req.body;
-
-    // Check auth
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "غير مصرح بتحديث المجموعة" });
-    }
-
-    const group = await AcademyGroup.findById(id);
-    if (!group) {
-      return res.status(404).json({ message: "المجموعة غير موجودة" });
-    }
-
-    if (name) group.name = name;
-    if (schedule) group.schedule = schedule;
-    if (maxCapacity) group.maxCapacity = maxCapacity;
-    if (isActive !== undefined) group.isActive = isActive;
-
-    await group.save();
-
-    const populatedGroup = await group.populate(
-      "sportId",
-      "name gender minAge maxAge",
-    );
-
-    const currentCount = await AcademySubscription.countDocuments({
-      groupId: group._id,
-      status: "active",
-    });
-
-    res.json({
-      message: "تم تحديث المجموعة بنجاح",
-      group: {
-        ...populatedGroup.toObject(),
-        currentCount,
-        isFull: currentCount >= group.maxCapacity,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+// PUT /api/academy/groups/:id - update group (admin/owner/supervisor only)
+router.put(
+  "/groups/:id",
+  protect,
+  allowRoles("admin", "owner", "supervisor"),
+  updateGroup,
+);
 
 // ============ DASHBOARD ENDPOINT ============
 
