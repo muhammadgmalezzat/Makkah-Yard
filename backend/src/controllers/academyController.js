@@ -558,6 +558,31 @@ const dashboardCtrl = async (req, res, next) => {
   }
 };
 
+// PUT /api/academy/groups/:id - update group
+const updateGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, schedule, maxCapacity, isActive } = req.body;
+    const AcademyGroup = require("../models/AcademyGroup");
+
+    const group = await AcademyGroup.findByIdAndUpdate(
+      id,
+      { $set: { name, schedule, maxCapacity, isActive } },
+      { new: true, runValidators: true },
+    ).populate("sportId", "name nameEn gender");
+
+    if (!group) {
+      return res
+        .status(404)
+        .json({ success: false, message: "المجموعة غير موجودة" });
+    }
+
+    res.json({ success: true, message: "تم تحديث المجموعة", data: group });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscriptionCtrl,
   listSubscriptionsCtrl,
@@ -568,4 +593,5 @@ module.exports = {
   expiringSubscriptionsCtrl,
   activeTodayCtrl,
   dashboardCtrl,
+  updateGroup,
 };
