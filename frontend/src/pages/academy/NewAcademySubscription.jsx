@@ -109,7 +109,7 @@ export default function NewAcademySubscription() {
 
   // Fetch monthly academy package for selected sport
   const { data: monthlyPackage } = useQuery({
-    queryKey: ["packages-academy-monthly", selectedSport?._id],
+    queryKey: ["packages-academy-monthly", selectedSport?._id, childType],
     queryFn: async () => {
       if (!selectedSport) return null;
 
@@ -126,11 +126,15 @@ export default function NewAcademySubscription() {
         selectedSport.name;
       console.log("Selected sport:", selectedSport);
       console.log("Sport value for API:", sportValue);
+      console.log("childType:", childType);
 
       try {
+        // Use different category based on member type
+        const category = childType === "linked" ? "sub_child" : "academy_only";
+
         const monthlyRes = await axios.get("/packages", {
           params: {
-            category: "academy_only",
+            category: category,
             sport: sportValue,
             isFlexibleDuration: "true",
             isActive: "true",
@@ -151,9 +155,11 @@ export default function NewAcademySubscription() {
 
   // Fetch annual academy package for selected sport
   const { data: annualPackage } = useQuery({
-    queryKey: ["packages-academy-annual", selectedSport?._id],
+    queryKey: ["packages-academy-annual", selectedSport?._id, childType],
     queryFn: async () => {
       if (!selectedSport) return null;
+      // Sub child members don't have annual packages, skip fetching
+      if (childType === "linked") return null;
 
       // Map Arabic sport names to English for API queries
       const sportMap = {
@@ -186,7 +192,7 @@ export default function NewAcademySubscription() {
         return null;
       }
     },
-    enabled: !!selectedSport,
+    enabled: !!selectedSport && childType !== "linked",
   });
 
   // Calculate price based on months and packages
