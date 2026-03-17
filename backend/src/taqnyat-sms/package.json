@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@types/request": "^2.48.5",
+    "request-promise": "^4.2.6"
+  },
+  "devDependencies": {
+    "@types/request-promise": "^4.1.47"
+  }
+}

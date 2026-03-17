@@ -19,6 +19,14 @@ const navItems = [
   { to: "/academy/new", label: "تسجيل اشتراك جديد", icon: "📝" },
   { to: "/academy/expiring", label: "الاشتراكات المنتهية", icon: "⏰" },
   { to: "/academy/coach-list", label: "قائمة المدرب", icon: "📋" },
+  { type: "divider" },
+  { label: "الإدارة", type: "section", roles: ["admin", "owner"] },
+  {
+    to: "/messaging",
+    label: "إرسال رسائل",
+    icon: "💬",
+    roles: ["admin", "owner"],
+  },
 ];
 
 const roleLabels = {
@@ -59,6 +67,11 @@ export default function Layout() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map((item, index) => {
+            // Check role-based visibility
+            if (item.roles && !item.roles.includes(user?.role)) {
+              return null;
+            }
+
             if (item.type === "divider") {
               return (
                 <div

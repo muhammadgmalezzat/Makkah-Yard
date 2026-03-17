@@ -1,0 +1,6 @@
+const Taqnyat = require('./taqnyat.js');
+const client = new Taqnyat.Taqnyat('Your Token Here ', 'Your Sender Here');
+let result = client.sendSMS('Your Messagess', "Your Recipients Here",null).then(function (response) {
+    console.log('Taqnyat Response:', response)
+  })
+   
