@@ -10,6 +10,7 @@ import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
 import RenewSubscriptionPage from "./pages/RenewSubscriptionPage";
 import AccountProfile from "./pages/AccountProfile";
 import AddSubMember from "./pages/AddSubMember";
+import MessagingPage from "./pages/MessagingPage";
 import SportsManagement from "./pages/academy/SportsManagement";
 import GroupsManagement from "./pages/academy/GroupsManagement";
 import NewAcademySubscription from "./pages/academy/NewAcademySubscription";
@@ -70,6 +71,7 @@ function App() {
               element={<ExpiringSubscriptions />}
             />
             <Route path="/academy/coach-list" element={<CoachList />} />
+            <Route path="/messaging" element={<MessagingPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
