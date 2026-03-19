@@ -9,8 +9,7 @@ const memberSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["primary", "partner", "child"],
-      default: "primary",
+      enum: ["primary", "partner", "child", "sub_adult"],
     },
     fullName: {
       type: String,

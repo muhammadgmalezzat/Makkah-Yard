@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "../../api/axios";
 
 export default function ChildProfile() {
   const { memberId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // State for modals and operations
   const [selectedSubscription, setSelectedSubscription] = useState(null);
@@ -132,6 +133,9 @@ export default function ChildProfile() {
       );
 
       setChangeSuccess("تم تغيير الرياضة بنجاح");
+      // Invalidate CoachList cache to force refetch with new data
+      queryClient.invalidateQueries({ queryKey: ["activeTodayMembers"] });
+
       setTimeout(() => {
         setShowChangeSportModal(false);
         setChangeFormData({ sportId: "", groupId: "" });
@@ -167,6 +171,9 @@ export default function ChildProfile() {
       );
 
       setChangeSuccess("تم تغيير المجموعة بنجاح");
+      // Invalidate CoachList cache to force refetch with new data
+      queryClient.invalidateQueries({ queryKey: ["activeTodayMembers"] });
+
       setTimeout(() => {
         setShowChangeGroupModal(false);
         setChangeFormData({ sportId: "", groupId: "" });

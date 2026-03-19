@@ -29,6 +29,7 @@ export default function CoachList() {
       const params = new URLSearchParams();
       params.append("sportId", filters.sportId);
       if (filters.groupId) params.append("groupId", filters.groupId);
+      params.append("_t", Date.now()); // Cache-busting timestamp
 
       const response = await axios.get(
         `/academy/subscriptions/active-today?${params}`,

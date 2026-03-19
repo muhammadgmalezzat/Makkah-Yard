@@ -7,6 +7,7 @@ const {
   newAcademyOnlySubscription,
   addSubMemberHandler,
   getAccountProfile,
+  updateSubscription,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
@@ -19,6 +20,9 @@ router.post(
   allowRoles("reception", "supervisor", "admin", "owner"),
   createSubscription,
 );
+
+// Update subscription
+router.put("/:id", protect, allowRoles("admin", "owner"), updateSubscription);
 
 // Create academy-only subscription
 router.post(

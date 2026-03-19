@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import axios from "../api/axios";
 
 const roleConfig = {
@@ -57,10 +58,17 @@ export default function AccountProfile() {
   const { accountId } = useParams();
   const navigate = useNavigate();
 
+  // Edit state
+  const [editingMember, setEditingMember] = useState(null);
+  const [memberEditForm, setMemberEditForm] = useState({});
+  const [editingSub, setEditingSub] = useState(null);
+  const [subEditForm, setSubEditForm] = useState({});
+
   const {
     data: profileData,
     isLoading,
     error,
+    refetch: fetchProfile,
   } = useQuery({
     queryKey: ["account", accountId],
     queryFn: async () => {
@@ -70,6 +78,53 @@ export default function AccountProfile() {
       return response.data.data;
     },
   });
+
+  // Handler functions for member edit
+  const openMemberEdit = (member) => {
+    setEditingMember(member);
+    setMemberEditForm({
+      fullName: member.fullName || "",
+      phone: member.phone || "",
+      email: member.email || "",
+      gender: member.gender || "male",
+      nationalId: member.nationalId || "",
+      dateOfBirth: member.dateOfBirth ? member.dateOfBirth.split("T")[0] : "",
+    });
+  };
+
+  const handleMemberEditSubmit = async () => {
+    try {
+      await axios.put(`/members/${editingMember._id}`, memberEditForm);
+      setEditingMember(null);
+      fetchProfile();
+      alert("✅ تم تحديث بيانات العضو");
+    } catch (error) {
+      alert(error.response?.data?.message || "حدث خطأ");
+    }
+  };
+
+  // Handler functions for subscription edit
+  const openSubEdit = (sub) => {
+    if (!sub) return;
+    setEditingSub(sub);
+    setSubEditForm({
+      startDate: sub.startDate ? sub.startDate.split("T")[0] : "",
+      endDate: sub.endDate ? sub.endDate.split("T")[0] : "",
+      status: sub.status || "active",
+      pricePaid: sub.pricePaid || 0,
+    });
+  };
+
+  const handleSubEditSubmit = async () => {
+    try {
+      await axios.put(`/subscriptions/${editingSub._id}`, subEditForm);
+      setEditingSub(null);
+      fetchProfile();
+      alert("✅ تم تحديث الاشتراك");
+    } catch (error) {
+      alert(error.response?.data?.message || "حدث خطأ");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -424,6 +479,24 @@ export default function AccountProfile() {
                       الأساسي
                     </div>
                   )}
+
+                  {/* Edit Buttons */}
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+                    <button
+                      onClick={() => openMemberEdit(m)}
+                      className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                    >
+                      ✏️ تعديل بيانات العضو
+                    </button>
+                    {gymSub && (
+                      <button
+                        onClick={() => openSubEdit(gymSub)}
+                        className="text-green-600 hover:text-green-800 text-xs font-medium"
+                      >
+                        ✏️ تعديل الاشتراك
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -434,6 +507,230 @@ export default function AccountProfile() {
           </div>
         )}
       </div>
+
+      {/* Member Edit Modal */}
+      {editingMember && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          dir="rtl"
+        >
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl max-h-screen overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">تعديل بيانات العضو</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  الاسم الكامل
+                </label>
+                <input
+                  type="text"
+                  value={memberEditForm.fullName}
+                  onChange={(e) =>
+                    setMemberEditForm({
+                      ...memberEditForm,
+                      fullName: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  رقم الجوال
+                </label>
+                <input
+                  type="text"
+                  value={memberEditForm.phone}
+                  onChange={(e) =>
+                    setMemberEditForm({
+                      ...memberEditForm,
+                      phone: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  البريد الإلكتروني
+                </label>
+                <input
+                  type="email"
+                  value={memberEditForm.email}
+                  onChange={(e) =>
+                    setMemberEditForm({
+                      ...memberEditForm,
+                      email: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  الجنس
+                </label>
+                <select
+                  value={memberEditForm.gender}
+                  onChange={(e) =>
+                    setMemberEditForm({
+                      ...memberEditForm,
+                      gender: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  رقم الهوية
+                </label>
+                <input
+                  type="text"
+                  value={memberEditForm.nationalId}
+                  onChange={(e) =>
+                    setMemberEditForm({
+                      ...memberEditForm,
+                      nationalId: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              {editingMember.role === "child" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    تاريخ الميلاد
+                  </label>
+                  <input
+                    type="date"
+                    value={memberEditForm.dateOfBirth}
+                    onChange={(e) =>
+                      setMemberEditForm({
+                        ...memberEditForm,
+                        dateOfBirth: e.target.value,
+                      })
+                    }
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleMemberEditSubmit}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
+              >
+                حفظ التعديلات
+              </button>
+              <button
+                onClick={() => setEditingMember(null)}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Edit Modal */}
+      {editingSub && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          dir="rtl"
+        >
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-xl font-bold mb-4">تعديل الاشتراك</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  تاريخ البداية
+                </label>
+                <input
+                  type="date"
+                  value={subEditForm.startDate}
+                  onChange={(e) =>
+                    setSubEditForm({
+                      ...subEditForm,
+                      startDate: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  تاريخ النهاية
+                </label>
+                <input
+                  type="date"
+                  value={subEditForm.endDate}
+                  onChange={(e) =>
+                    setSubEditForm({
+                      ...subEditForm,
+                      endDate: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  الحالة
+                </label>
+                <select
+                  value={subEditForm.status}
+                  onChange={(e) =>
+                    setSubEditForm({
+                      ...subEditForm,
+                      status: e.target.value,
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">نشط</option>
+                  <option value="expired">منتهي</option>
+                  <option value="frozen">مجمد</option>
+                  <option value="cancelled">ملغي</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  المبلغ المدفوع
+                </label>
+                <input
+                  type="number"
+                  value={subEditForm.pricePaid}
+                  onChange={(e) =>
+                    setSubEditForm({
+                      ...subEditForm,
+                      pricePaid: parseFloat(e.target.value),
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleSubEditSubmit}
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700"
+              >
+                حفظ التعديلات
+              </button>
+              <button
+                onClick={() => setEditingSub(null)}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SECTION 3: Payment History */}
       {payments && payments.length > 0 && (
