@@ -428,6 +428,25 @@ const getAccountProfile = async (req, res, next) => {
   }
 };
 
+const updateSubscription = async (req, res, next) => {
+  try {
+    const { startDate, endDate, status, pricePaid } = req.body;
+    const sub = await Subscription.findByIdAndUpdate(
+      req.params.id,
+      { $set: { startDate, endDate, status, pricePaid } },
+      { new: true, runValidators: true },
+    );
+    if (!sub) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الاشتراك غير موجود" });
+    }
+    res.json({ success: true, message: "تم تحديث الاشتراك", data: sub });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
@@ -436,4 +455,5 @@ module.exports = {
   newAcademyOnlySubscription,
   addSubMemberHandler,
   getAccountProfile,
+  updateSubscription,
 };

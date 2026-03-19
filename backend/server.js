@@ -11,6 +11,7 @@ const packageRoutes = require("./src/routes/packages");
 const subscriptionRoutes = require("./src/routes/subscriptions");
 const academyRoutes = require("./src/routes/academyRoutes");
 const messagingRoutes = require("./src/routes/messagingRoutes");
+const memberRoutes = require("./src/routes/memberRoutes");
 
 // Middleware
 const errorHandler = require("./src/middleware/errorHandler");
@@ -38,6 +39,7 @@ app.use("/api/packages", packageRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/academy", academyRoutes);
 app.use("/api/messaging", messagingRoutes);
+app.use("/api/members", memberRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

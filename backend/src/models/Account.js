@@ -13,8 +13,7 @@ const accountSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
-      default: "active",
+      enum: ["active", "frozen", "cancelled", "expired"],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

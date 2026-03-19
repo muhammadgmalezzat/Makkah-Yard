@@ -405,6 +405,14 @@ const activeTodayCtrl = async (req, res, next) => {
       .populate("groupId", "name schedule")
       .sort({ "groupId.name": 1, "memberId.fullName": 1 });
 
+    // Prevent browser caching
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+
     res.json(subscriptions);
   } catch (error) {
     next(error);
