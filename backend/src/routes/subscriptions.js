@@ -8,6 +8,8 @@ const {
   addSubMemberHandler,
   getAccountProfile,
   updateSubscription,
+  getMembersDirectory,
+  deleteAccount,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
@@ -56,6 +58,14 @@ router.get(
   searchSubscriptions,
 );
 
+// Get members directory
+router.get(
+  "/members-directory",
+  protect,
+  allowRoles("reception", "supervisor", "admin", "owner"),
+  getMembersDirectory,
+);
+
 // Get subscription details
 router.get(
   "/:id",
@@ -70,6 +80,14 @@ router.post(
   protect,
   allowRoles("reception", "supervisor", "admin", "owner"),
   renewSubscriptionCtrl,
+);
+
+// Delete account and all related data
+router.delete(
+  "/accounts/:accountId",
+  protect,
+  allowRoles("admin", "owner"),
+  deleteAccount,
 );
 
 module.exports = router;
