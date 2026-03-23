@@ -9,7 +9,7 @@ const navItems = [
     label: "إضافة عضو فرعي",
     icon: "👤",
   },
-  { to: "/subscriptions/search", label: "البحث عن الاشتراكات", icon: "🔍" },
+  { to: "/subscriptions/search", label: "دليل الأعضاء", icon: "🔍" },
   { to: "/packages", label: "الحزم والأسعار", icon: "📦" },
   { type: "divider" },
   { label: "الأكاديمية", type: "section" },

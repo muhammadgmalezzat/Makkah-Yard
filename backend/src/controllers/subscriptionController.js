@@ -4,6 +4,8 @@ const Package = require("../models/Package");
 const Account = require("../models/Account");
 const Payment = require("../models/Payment");
 const AcademySubscription = require("../models/AcademySubscription");
+const AcademyGroup = require("../models/AcademyGroup");
+const AuditLog = require("../models/AuditLog");
 const {
   createNewSubscription,
   createFriendsSubscription,
@@ -447,6 +449,205 @@ const updateSubscription = async (req, res, next) => {
   }
 };
 
+const getMembersDirectory = async (req, res, next) => {
+  try {
+    const {
+      q, // search query
+      packageType, // all, individual, friends, family, academy_only
+      startDate, // filter by subscription start date
+      endDate, // filter by subscription end date
+      activeOnly, // true/false
+      gender, // male, female, all
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    console.log("packageType filter:", packageType);
+
+    // Step 1: Filter accounts by type
+    let accountFilter = {};
+    if (packageType && packageType !== "all") {
+      accountFilter.type = packageType;
+    }
+    const filteredAccounts = await Account.find(accountFilter).distinct("_id");
+    console.log("filteredAccounts count:", filteredAccounts.length);
+
+    // Step 2: Find primary members in those accounts
+    let memberFilter = {
+      role: "primary",
+      isActive: true,
+      accountId: { $in: filteredAccounts },
+    };
+    if (gender && gender !== "all") memberFilter.gender = gender;
+    if (q && q.trim()) {
+      memberFilter.$or = [
+        { fullName: { $regex: q.trim(), $options: "i" } },
+        { phone: { $regex: q.trim(), $options: "i" } },
+        { email: { $regex: q.trim(), $options: "i" } },
+      ];
+    }
+
+    const primaryMembers = await Member.find(memberFilter)
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .lean();
+
+    console.log("primaryMembers found:", primaryMembers.length);
+
+    // Step 3: Academy children (only when packageType is all or academy_only)
+    let academyMembers = [];
+    if (
+      !packageType ||
+      packageType === "all" ||
+      packageType === "academy_only"
+    ) {
+      const academyAccountIds = await Account.find({
+        type: "academy_only",
+      }).distinct("_id");
+      let childFilter = {
+        role: "child",
+        isActive: true,
+        accountId: { $in: academyAccountIds },
+      };
+      if (gender && gender !== "all") childFilter.gender = gender;
+      if (q && q.trim()) {
+        childFilter.$or = [
+          { fullName: { $regex: q.trim(), $options: "i" } },
+          { phone: { $regex: q.trim(), $options: "i" } },
+        ];
+      }
+      academyMembers = await Member.find(childFilter).lean();
+    }
+
+    // Step 4: Combine and enrich
+    const allMembers = [...primaryMembers, ...academyMembers];
+
+    const results = await Promise.all(
+      allMembers.map(async (member) => {
+        const account = await Account.findById(member.accountId).lean();
+
+        const gymSub = await Subscription.findOne({ memberId: member._id })
+          .sort({ createdAt: -1 })
+          .populate("packageId", "name category durationMonths")
+          .lean();
+
+        const academySubs = await AcademySubscription.find({
+          memberId: member._id,
+        })
+          .populate("sportId", "name")
+          .populate("groupId", "name")
+          .sort({ createdAt: -1 })
+          .lean();
+
+        // Apply activeOnly filter
+        if (activeOnly === "true") {
+          const hasActiveGym = gymSub?.status === "active";
+          const hasActiveAcademy = academySubs.some(
+            (s) => s.status === "active",
+          );
+          if (!hasActiveGym && !hasActiveAcademy) return null;
+        }
+
+        // Apply date range filter on gym subscription
+        if (gymSub && startDate) {
+          if (new Date(gymSub.startDate) < new Date(startDate)) return null;
+        }
+        if (gymSub && endDate) {
+          if (new Date(gymSub.endDate) > new Date(endDate)) return null;
+        }
+
+        // Count all members in this account
+        const accountMemberCount = await Member.countDocuments({
+          accountId: member.accountId,
+          isActive: true,
+        });
+
+        return {
+          member,
+          account,
+          gymSubscription: gymSub || null,
+          academySubscriptions: academySubs || [],
+          accountMemberCount,
+          accountId: member.accountId,
+        };
+      }),
+    );
+
+    const filtered = results.filter(Boolean);
+
+    res.json({
+      success: true,
+      count: filtered.length,
+      data: filtered,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteAccount = async (req, res, next) => {
+  try {
+    const { accountId } = req.params;
+
+    const account = await Account.findById(accountId);
+    if (!account) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الحساب غير موجود" });
+    }
+
+    // Find all members in this account
+    const members = await Member.find({ accountId });
+    const memberIds = members.map((m) => m._id);
+
+    console.log("Deleting account:", accountId);
+    console.log("Members to delete:", memberIds.length);
+
+    // Delete all related data in order
+    // 1. Payments
+    await Payment.deleteMany({ memberId: { $in: memberIds } });
+
+    // 2. AuditLogs
+    await AuditLog.deleteMany({ accountId });
+
+    // 3. Gym Subscriptions
+    await Subscription.deleteMany({ memberId: { $in: memberIds } });
+
+    // 4. Academy Subscriptions - update group counts
+    const academySubs = await AcademySubscription.find({
+      memberId: { $in: memberIds },
+    });
+    for (const sub of academySubs) {
+      await AcademyGroup.findByIdAndUpdate(
+        sub.groupId,
+        { $inc: { currentCount: -1 } },
+        { new: true },
+      );
+    }
+    await AcademySubscription.deleteMany({
+      memberId: { $in: memberIds },
+    });
+
+    // 5. Members
+    await Member.deleteMany({ accountId });
+
+    // 6. Account
+    await Account.findByIdAndDelete(accountId);
+
+    console.log("Account deleted successfully:", accountId);
+
+    res.json({
+      success: true,
+      message: "تم حذف الحساب وجميع البيانات المرتبطة به",
+      deleted: {
+        membersCount: memberIds.length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
@@ -456,4 +657,6 @@ module.exports = {
   addSubMemberHandler,
   getAccountProfile,
   updateSubscription,
+  getMembersDirectory,
+  deleteAccount,
 };
