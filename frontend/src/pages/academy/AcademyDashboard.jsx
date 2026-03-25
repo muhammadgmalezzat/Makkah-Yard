@@ -30,10 +30,12 @@ export default function AcademyDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
+      <div className="flex justify-center items-center min-h-screen p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل البيانات...</p>
+          <p className="text-gray-600 text-sm sm:text-base">
+            جاري تحميل البيانات...
+          </p>
         </div>
       </div>
     );
@@ -41,8 +43,10 @@ export default function AcademyDashboard() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p className="text-red-700">خطأ في تحميل البيانات</p>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center m-4 sm:m-6">
+        <p className="text-red-700 text-sm sm:text-base">
+          خطأ في تحميل البيانات
+        </p>
       </div>
     );
   }
@@ -63,61 +67,79 @@ export default function AcademyDashboard() {
   const genderColors = ["#3b82f6", "#ec4899"];
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-right mb-8">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <h1 className="text-xl sm:text-3xl font-bold text-right mb-6 sm:mb-8">
         لوحة تحكم الأكاديمية
       </h1>
 
       {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {/* Total Children */}
-        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white text-right">
+        <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 sm:p-6 text-white text-right">
           <div className="flex items-center justify-between">
-            <span className="text-4xl font-bold">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-bold">
               {dashboard.totalChildren}
             </span>
-            <span className="text-5xl opacity-20">👶</span>
+            <span className="text-3xl sm:text-4xl lg:text-5xl opacity-20">
+              👶
+            </span>
           </div>
-          <p className="text-blue-100 mt-2 text-sm">إجمالي الأطفال النشطين</p>
+          <p className="text-blue-100 mt-2 text-xs sm:text-sm">
+            إجمالي الأطفال النشطين
+          </p>
         </div>
 
         {/* Monthly Revenue */}
-        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white text-right">
+        <div className="bg-linear-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-4 sm:p-6 text-white text-right">
           <div className="flex items-center justify-between">
-            <span className="text-3xl font-bold">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-bold">
               {dashboard.monthlyRevenue.toLocaleString("en")}
             </span>
-            <span className="text-5xl opacity-20">💰</span>
+            <span className="text-3xl sm:text-4xl lg:text-5xl opacity-20">
+              💰
+            </span>
           </div>
-          <p className="text-green-100 mt-2 text-sm">إيراد الشهر الحالي</p>
+          <p className="text-green-100 mt-2 text-xs sm:text-sm">
+            إيراد الشهر الحالي
+          </p>
         </div>
 
         {/* Expiring This Week */}
-        <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-6 text-white text-right">
+        <div className="bg-linear-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-4 sm:p-6 text-white text-right">
           <div className="flex items-center justify-between">
-            <span className="text-4xl font-bold">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-bold">
               {dashboard.expiringThisWeek}
             </span>
-            <span className="text-5xl opacity-20">⏰</span>
+            <span className="text-3xl sm:text-4xl lg:text-5xl opacity-20">
+              ⏰
+            </span>
           </div>
-          <p className="text-orange-100 mt-2 text-sm">ينتهون هذا الأسبوع</p>
+          <p className="text-orange-100 mt-2 text-xs sm:text-sm">
+            ينتهون هذا الأسبوع
+          </p>
         </div>
 
         {/* Full Groups */}
-        <div className="bg-linear-to-br from-red-500 to-red-600 rounded-lg shadow-lg p-6 text-white text-right">
+        <div className="bg-linear-to-br from-red-500 to-red-600 rounded-lg shadow-lg p-4 sm:p-6 text-white text-right">
           <div className="flex items-center justify-between">
-            <span className="text-4xl font-bold">{dashboard.fullGroups}</span>
-            <span className="text-5xl opacity-20">📊</span>
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-bold">
+              {dashboard.fullGroups}
+            </span>
+            <span className="text-3xl sm:text-4xl lg:text-5xl opacity-20">
+              📊
+            </span>
           </div>
-          <p className="text-red-100 mt-2 text-sm">المجموعات الممتلئة</p>
+          <p className="text-red-100 mt-2 text-xs sm:text-sm">
+            المجموعات الممتلئة
+          </p>
         </div>
       </div>
 
       {/* Row 2: Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Sports Bar Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-right mb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold text-right mb-4 sm:mb-6">
             توزيع الأطفال حسب الرياضة
           </h2>
           {dashboard.bySport.length > 0 ? (
@@ -145,8 +167,8 @@ export default function AcademyDashboard() {
         </div>
 
         {/* Gender Pie Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-right mb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold text-right mb-4 sm:mb-6">
             توزيع الأطفال (أولاد / بنات)
           </h2>
           {genderData.some((d) => d.value > 0) ? (
@@ -180,33 +202,33 @@ export default function AcademyDashboard() {
 
       {/* Row 3: Groups Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-right">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold text-right">
             المجموعات ونسبة الامتلاء
           </h2>
         </div>
 
         {dashboard.byGroup.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full min-w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                     المجموعة
                   </th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                     الرياضة
                   </th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                     العدد الحالي
                   </th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                     السعة الكلية
                   </th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                     نسبة الامتلاء
                   </th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                     الحالة
                   </th>
                 </tr>
@@ -226,24 +248,24 @@ export default function AcademyDashboard() {
                         idx % 2 === 0 ? "bg-white" : "bg-gray-50"
                       }`}
                     >
-                      <td className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                      <td className="px-3 sm:px-6 py-2 sm:py-4 text-right text-xs sm:text-sm font-semibold text-gray-900">
                         {group.groupName}
                       </td>
-                      <td className="px-6 py-4 text-right text-sm text-gray-700">
+                      <td className="px-3 sm:px-6 py-2 sm:py-4 text-right text-xs sm:text-sm text-gray-700">
                         {group.sportName}
                       </td>
-                      <td className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                      <td className="px-3 sm:px-6 py-2 sm:py-4 text-center text-xs sm:text-sm font-semibold text-gray-900">
                         {group.count}
                       </td>
-                      <td className="px-6 py-4 text-center text-sm text-gray-700">
+                      <td className="px-3 sm:px-6 py-2 sm:py-4 text-center text-xs sm:text-sm text-gray-700">
                         {group.maxCapacity}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 sm:px-6 py-2 sm:py-4 text-center">
                         <div className="flex items-center gap-2 justify-center">
-                          <span className="text-sm font-semibold text-gray-900">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900">
                             {percentage}%
                           </span>
-                          <div className="w-32 bg-gray-200 rounded-full h-2">
+                          <div className="w-16 sm:w-32 bg-gray-200 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full transition ${
                                 isFull
@@ -257,9 +279,9 @@ export default function AcademyDashboard() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 sm:px-6 py-2 sm:py-4 text-center">
                         <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                          className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${
                             isFull
                               ? "bg-red-100 text-red-700"
                               : isHigh
@@ -277,7 +299,9 @@ export default function AcademyDashboard() {
             </table>
           </div>
         ) : (
-          <div className="p-6 text-center text-gray-500">لا توجد مجموعات</div>
+          <div className="p-4 sm:p-6 text-center text-gray-500 text-sm sm:text-base">
+            لا توجد مجموعات
+          </div>
         )}
       </div>
     </div>
