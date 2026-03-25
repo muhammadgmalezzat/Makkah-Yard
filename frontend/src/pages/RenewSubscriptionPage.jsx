@@ -69,7 +69,10 @@ export default function RenewSubscriptionPage() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (subLoading) {
     return (
-      <div className="flex items-center justify-center h-64" dir="rtl">
+      <div
+        className="flex items-center justify-center min-h-screen p-4"
+        dir="rtl"
+      >
         <div className="flex flex-col items-center gap-3 text-gray-400">
           <svg
             className="animate-spin w-8 h-8 text-blue-500"
@@ -111,8 +114,11 @@ export default function RenewSubscriptionPage() {
   // ── Success ──────────────────────────────────────────────────────────────
   if (success) {
     return (
-      <div className="flex items-center justify-center h-64" dir="rtl">
-        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-sm w-full p-10 text-center">
+      <div
+        className="flex items-center justify-center min-h-screen p-4"
+        dir="rtl"
+      >
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-sm w-full p-6 sm:p-10 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
               className="w-8 h-8 text-green-500"
@@ -139,20 +145,22 @@ export default function RenewSubscriptionPage() {
 
   // ── Main ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto" dir="rtl">
+    <div className="max-w-2xl mx-auto p-4 sm:p-0" dir="rtl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">تجديد الاشتراك</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+          تجديد الاشتراك
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm sm:text-base">
           اختر الحزمة الجديدة وأكمل بيانات الدفع
         </p>
       </div>
 
       {/* Current Subscription Info */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-6">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">
           الاشتراك الحالي
         </h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoItem label="الاسم" value={subscription.memberId.fullName} />
           <InfoItem
             label="الحزمة الحالية"
@@ -179,7 +187,7 @@ export default function RenewSubscriptionPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Package Selection */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
           <label className="text-sm font-semibold text-gray-400 uppercase tracking-wide block mb-4">
             اختر الحزمة الجديدة
           </label>
@@ -226,7 +234,7 @@ export default function RenewSubscriptionPage() {
         </div>
 
         {/* Date & Payment */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 space-y-5">
           <label className="text-sm font-semibold text-gray-400 uppercase tracking-wide block">
             بيانات الدفع
           </label>
@@ -243,7 +251,7 @@ export default function RenewSubscriptionPage() {
 
           <div>
             <label className={labelClass}>طريقة الدفع</label>
-            <div className="grid grid-cols-3 gap-2 mt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
               {[
                 { value: "cash", label: "نقدي", icon: "💵" },
                 { value: "network", label: "تحويل بنكي", icon: "🏦" },
@@ -253,7 +261,7 @@ export default function RenewSubscriptionPage() {
                   key={m.value}
                   type="button"
                   onClick={() => setPaymentMethod(m.value)}
-                  className={`py-3 rounded-xl border-2 text-center text-sm font-semibold transition-all
+                  className={`py-3 rounded-xl border-2 text-center text-sm font-semibold transition-all min-h-[44px] flex flex-col items-center justify-center
                     ${
                       paymentMethod === m.value
                         ? "border-blue-600 bg-blue-50 text-blue-700"
@@ -281,18 +289,18 @@ export default function RenewSubscriptionPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
+            className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition min-h-[44px] flex items-center justify-center"
           >
             إلغاء
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

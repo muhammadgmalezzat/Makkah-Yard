@@ -510,15 +510,17 @@ export default function NewAcademySubscription() {
   // Step 1: Child Type
   if (step === 0) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
           تسجيل اشتراك أكاديمية جديد
         </h1>
 
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-right">اختر نوع الاشتراك</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-right">
+            اختر نوع الاشتراك
+          </h2>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setChildType("linked")}
               className={`p-6 rounded-lg border-2 text-center transition ${
@@ -627,8 +629,10 @@ export default function NewAcademySubscription() {
   // Step 2: Child Info
   if (step === 2) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">معلومات الطفل</h1>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
+          معلومات الطفل
+        </h1>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -777,8 +781,10 @@ export default function NewAcademySubscription() {
       childData.gender === "male" ? ["male", "both"] : ["female", "both"];
 
     return (
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">اختر الرياضة</h1>
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
+          اختر الرياضة
+        </h1>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

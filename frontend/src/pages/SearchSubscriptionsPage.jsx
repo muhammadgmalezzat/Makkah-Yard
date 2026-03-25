@@ -126,10 +126,14 @@ export default function SearchSubscriptionsPage() {
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">دليل الأعضاء</h1>
-          <p className="text-gray-500 mt-1">جميع المشتركين في النادي</p>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+            دليل الأعضاء
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            جميع المشتركين في النادي
+          </p>
         </div>
         {results.length > 0 && (
           <div className="bg-blue-50 rounded-xl px-4 py-2 border border-blue-200">
@@ -141,16 +145,18 @@ export default function SearchSubscriptionsPage() {
       </div>
 
       {/* Package Type Filter Bar */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-700">نوع الاشتراك</p>
+          <p className="text-xs sm:text-sm font-semibold text-gray-700">
+            نوع الاشتراك
+          </p>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0">
           {packageTypeOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => setPackageType(option.value)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium text-sm transition ${
+              className={`px-4 py-2 rounded-lg whitespace-nowrap font-medium text-xs sm:text-sm min-h-[44px] flex items-center justify-center transition ${
                 packageType === option.value
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -165,7 +171,7 @@ export default function SearchSubscriptionsPage() {
       {/* Search and Additional Filters */}
       <div className="space-y-3">
         {/* Search Input */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
           <div className="relative">
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
               🔍
@@ -175,15 +181,15 @@ export default function SearchSubscriptionsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="اسم أو رقم هاتف أو بريد إلكتروني"
-              className="w-full pr-11 pl-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition text-right"
+              className="w-full pr-11 pl-4 py-2 sm:py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition text-right"
             />
           </div>
         </div>
 
         {/* Additional Filters Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Date Range From */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
             <label className="block text-xs text-gray-500 mb-2">من</label>
             <input
               type="date"
@@ -194,7 +200,7 @@ export default function SearchSubscriptionsPage() {
           </div>
 
           {/* Date Range To */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
             <label className="block text-xs text-gray-500 mb-2">إلى</label>
             <input
               type="date"
@@ -205,7 +211,7 @@ export default function SearchSubscriptionsPage() {
           </div>
 
           {/* Gender Toggle */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
             <label className="block text-xs text-gray-500 mb-2">النوع</label>
             <div className="flex gap-1">
               {[
@@ -216,7 +222,7 @@ export default function SearchSubscriptionsPage() {
                 <button
                   key={opt.value}
                   onClick={() => setGender(opt.value)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition ${
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium min-h-[44px] flex items-center justify-center transition ${
                     gender === opt.value
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -230,8 +236,8 @@ export default function SearchSubscriptionsPage() {
         </div>
 
         {/* Active Only Checkbox */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <label className="flex items-center gap-3 cursor-pointer">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+          <label className="flex items-center gap-3 cursor-pointer min-h-[44px] flex items-center">
             <input
               type="checkbox"
               checked={activeOnly}
@@ -267,7 +273,7 @@ export default function SearchSubscriptionsPage() {
 
       {/* Loading Skeleton */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
             <SkeletonCard key={i} />
           ))}
@@ -289,7 +295,7 @@ export default function SearchSubscriptionsPage() {
 
       {/* Results Grid */}
       {!isLoading && results.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {results.map((result) => {
             const member = result.member;
             const memberName = member?.fullName || "Unknown";
@@ -339,7 +345,7 @@ export default function SearchSubscriptionsPage() {
               actionButton = (
                 <button
                   onClick={() => navigate(`/accounts/${result.accountId}`)}
-                  className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-xs sm:text-sm font-semibold hover:bg-blue-700 transition min-h-[44px] flex items-center justify-center"
                 >
                   عرض الحساب
                 </button>
@@ -384,7 +390,7 @@ export default function SearchSubscriptionsPage() {
               actionButton = (
                 <button
                   onClick={() => navigate(`/academy/members/${member._id}`)}
-                  className="w-full py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition"
+                  className="w-full py-2.5 rounded-xl bg-purple-600 text-white text-xs sm:text-sm font-semibold hover:bg-purple-700 transition min-h-[44px] flex items-center justify-center"
                 >
                   عرض الملف
                 </button>

@@ -199,16 +199,18 @@ export default function AccountProfile() {
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">ملف الحساب</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+            ملف الحساب
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm">
             {accountType.icon} {accountType.label}
           </p>
         </div>
         <button
           onClick={() => navigate("/subscriptions/search")}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition min-h-[44px] w-full sm:w-auto"
         >
           ← العودة
         </button>
@@ -216,37 +218,37 @@ export default function AccountProfile() {
 
       {/* SECTION 1: Account Header Box (Primary Subscription) */}
       {primaryMember && primarySub && (
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 shadow-sm">
-          <div className="flex items-start justify-between mb-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                 {primaryMember.fullName}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
                 {accountType.icon} {accountType.label}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {isSubscriptionActive && (
                 <>
-                  <button className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition">
+                  <button className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition min-h-[44px]">
                     تجديد
                   </button>
-                  <button className="px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition">
+                  <button className="px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition min-h-[44px]">
                     تجميد
                   </button>
                 </>
               )}
               <button
                 onClick={() => {}}
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition"
+                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition min-h-[44px]"
               >
                 عرض المدفوعات
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div className="bg-white rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-1">الباقة</p>
               <p className="font-bold text-gray-900">
@@ -511,10 +513,10 @@ export default function AccountProfile() {
       {/* Member Edit Modal */}
       {editingMember && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50"
           dir="rtl"
         >
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl max-h-screen overflow-y-auto">
+          <div className="bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-md shadow-xl min-h-screen sm:min-h-0 overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">تعديل بيانات العضو</h2>
             <div className="space-y-3">
               <div>
@@ -618,16 +620,16 @@ export default function AccountProfile() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <button
                 onClick={handleMemberEditSubmit}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 min-h-[44px] flex items-center justify-center"
               >
                 حفظ التعديلات
               </button>
               <button
                 onClick={() => setEditingMember(null)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 min-h-[44px] flex items-center justify-center"
               >
                 إلغاء
               </button>
@@ -639,10 +641,10 @@ export default function AccountProfile() {
       {/* Subscription Edit Modal */}
       {editingSub && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50"
           dir="rtl"
         >
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-md shadow-xl min-h-screen sm:min-h-0 overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">تعديل الاشتراك</h2>
             <div className="space-y-3">
               <div>
@@ -714,16 +716,16 @@ export default function AccountProfile() {
                 />
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <button
                 onClick={handleSubEditSubmit}
-                className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700"
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 min-h-[44px] flex items-center justify-center"
               >
                 حفظ التعديلات
               </button>
               <button
                 onClick={() => setEditingSub(null)}
-                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 min-h-[44px] flex items-center justify-center"
               >
                 إلغاء
               </button>
@@ -738,8 +740,8 @@ export default function AccountProfile() {
           <h2 className="text-xl font-bold text-gray-900">سجل المدفوعات</h2>
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full text-sm min-w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-right font-semibold text-gray-700">
@@ -794,7 +796,7 @@ export default function AccountProfile() {
 
       {/* SECTION 4: Account Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 text-center">
             <p className="text-3xl font-bold text-blue-600">
               {stats.totalMembers}

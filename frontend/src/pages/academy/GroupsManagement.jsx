@@ -133,9 +133,9 @@ export default function GroupsManagement() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">إدارة المجموعات</h1>
+        <h1 className="text-xl sm:text-3xl font-bold">إدارة المجموعات</h1>
         {user?.role === "admin" && (
           <button
             onClick={() => setIsFormOpen(!isFormOpen)}
@@ -148,7 +148,7 @@ export default function GroupsManagement() {
 
       {/* Form */}
       {isFormOpen && user?.role === "admin" && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
           <h2 className="text-xl font-bold text-right mb-4">
             إضافة مجموعة جديدة
           </h2>
@@ -269,7 +269,7 @@ export default function GroupsManagement() {
           لا توجد مجموعات للعرض
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {groups.map((group) => {
             const percentage = (group.currentCount / group.maxCapacity) * 100;
             return (
@@ -345,10 +345,10 @@ export default function GroupsManagement() {
       {/* Edit Modal */}
       {editingGroup && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4"
           dir="rtl"
         >
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full sm:w-auto sm:max-w-lg shadow-xl">
             <h2 className="text-xl font-bold mb-4">
               تعديل مجموعة: {editingGroup.name}
             </h2>

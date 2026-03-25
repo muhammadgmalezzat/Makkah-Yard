@@ -391,20 +391,22 @@ export default function MessagingPage() {
   };
 
   return (
-    <div className="p-8 max-w-3xl" dir="rtl">
+    <div className="p-4 sm:p-8 max-w-3xl mx-auto" dir="rtl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">إرسال رسائل</h1>
-        <p className="text-gray-600">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2">
+          إرسال رسائل
+        </h1>
+        <p className="text-gray-600 text-sm sm:text-base">
           أرسل رسائل SMS أو WhatsApp إلى الأعضاء والعملاء
         </p>
       </div>
 
       {/* Admin Phone Numbers Configuration */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-4">
           أرقام الاتصال للتقارير اليومية
         </h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label
               htmlFor="mgmt_phone"
@@ -442,7 +444,7 @@ export default function MessagingPage() {
 
       <form
         onSubmit={handleSendMessage}
-        className="bg-white rounded-lg shadow p-6 space-y-6"
+        className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-6"
       >
         {/* Success Message */}
         {successMessage && (
@@ -507,11 +509,11 @@ export default function MessagingPage() {
           <label className="block text-sm font-bold text-gray-700 mb-3">
             اختر طريقة الإرسال:
           </label>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={() => setChannel("whatsapp")}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${
+              className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all min-h-[44px] flex items-center justify-center ${
                 channel === "whatsapp"
                   ? "bg-green-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -522,7 +524,7 @@ export default function MessagingPage() {
             <button
               type="button"
               onClick={() => setChannel("sms")}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${
+              className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all min-h-[44px] flex items-center justify-center ${
                 channel === "sms"
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -533,7 +535,7 @@ export default function MessagingPage() {
             <button
               type="button"
               onClick={() => setChannel("email")}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${
+              className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all min-h-[44px] flex items-center justify-center ${
                 channel === "email"
                   ? "bg-purple-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -571,14 +573,14 @@ export default function MessagingPage() {
             <label className="block text-sm font-bold text-gray-700 mb-3">
               القوالب المسبقة:
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0">
               {TEMPLATES.map((template) => (
                 <button
                   key={template.id}
                   type="button"
                   onClick={() => handleTemplateSelect(template.id)}
                   disabled={isLoading}
-                  className={`whitespace-nowrap px-4 py-2 rounded-full font-bold transition-all ${
+                  className={`whitespace-nowrap px-4 py-2 rounded-full font-bold transition-all min-h-[44px] flex items-center justify-center ${
                     selectedTemplate === template.id
                       ? "bg-blue-600 text-white"
                       : "bg-gray-200 text-gray-800 hover:bg-gray-300"
@@ -638,11 +640,11 @@ export default function MessagingPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 pt-4">
           <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
           >
             {isLoading ? (
               <>
@@ -659,7 +661,7 @@ export default function MessagingPage() {
               type="button"
               onClick={handleTestMessage}
               disabled={isLoading || !phone}
-              className="bg-gray-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-gray-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="sm:flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-gray-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center"
             >
               🧪 رسالة تجريبية
             </button>
@@ -669,7 +671,7 @@ export default function MessagingPage() {
 
       {/* Stats Display */}
       {stats && (channel === "sms" || channel === "whatsapp") && (
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
           <h3 className="font-bold text-blue-900 mb-3">احصائيات فورية:</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white rounded p-3">
@@ -701,7 +703,7 @@ export default function MessagingPage() {
       )}
 
       {/* Info Box */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6">
         <h3 className="font-bold text-blue-900 mb-2">معلومات مهمة:</h3>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>✓ تأكد من تفعيل مفتاح API في متغيرات البيئة</li>
