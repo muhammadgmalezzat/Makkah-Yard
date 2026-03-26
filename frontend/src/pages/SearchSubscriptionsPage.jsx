@@ -50,6 +50,12 @@ export default function SearchSubscriptionsPage() {
   const [activeOnly, setActiveOnly] = useState(false);
   const [gender, setGender] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
+  const [limit, setLimit] = useState(100);
+  const [responseData, setResponseData] = useState({
+    data: [],
+    total: 0,
+    count: 0,
+  });
 
   const canDelete = user?.role === "admin" || user?.role === "owner";
 
@@ -62,11 +68,7 @@ export default function SearchSubscriptionsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const {
-    data: results = [],
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { isLoading, refetch } = useQuery({
     queryKey: [
       "membersDirectory",
       packageType,
@@ -75,6 +77,7 @@ export default function SearchSubscriptionsPage() {
       endDate,
       activeOnly,
       gender,
+      limit,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -84,14 +87,24 @@ export default function SearchSubscriptionsPage() {
       if (endDate) params.append("endDate", endDate);
       if (activeOnly) params.append("activeOnly", "true");
       if (gender !== "all") params.append("gender", gender);
+      params.append("limit", limit.toString());
 
       const response = await axios.get(
         `/subscriptions/members-directory?${params.toString()}`,
       );
-      return response.data.data || [];
+      setResponseData({
+        data: response.data.data || [],
+        total: response.data.total || 0,
+        count: response.data.count || 0,
+      });
+      return response.data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  const results = responseData.data;
+  const total = responseData.total;
+  const count = responseData.count;
 
   const handleDelete = async (accountId, memberName) => {
     const confirmed = window.confirm(
@@ -135,11 +148,16 @@ export default function SearchSubscriptionsPage() {
             جميع المشتركين في النادي
           </p>
         </div>
-        {results.length > 0 && (
+        {total > 0 && (
           <div className="bg-blue-50 rounded-xl px-4 py-2 border border-blue-200">
             <p className="text-sm font-semibold text-blue-700">
-              {results.length} عضو
+              {total} عضو إجمالي
             </p>
+            {count < total && (
+              <p className="text-xs text-blue-600 mt-1">
+                عرض {count} من {total}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -278,6 +296,16 @@ export default function SearchSubscriptionsPage() {
             <SkeletonCard key={i} />
           ))}
         </div>
+      )}
+
+      {/* Load More Button */}
+      {!isLoading && results.length > 0 && count < total && (
+        <button
+          onClick={() => setLimit((prev) => prev + 100)}
+          className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition font-medium text-sm"
+        >
+          تحميل المزيد ({total - count} متبقي)
+        </button>
       )}
 
       {/* Empty State - No Results */}

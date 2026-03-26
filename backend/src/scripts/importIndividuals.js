@@ -30,6 +30,9 @@ const PACKAGE_MAP = {
     category: "individual",
     durationMonths: 6,
   },
+  "Single_Package_–_3_Months": { category: "individual", durationMonths: 3 },
+  "Single Package - 3 Months": { category: "individual", durationMonths: 3 },
+  "Single Package - 3 months": { category: "individual", durationMonths: 3 },
 };
 
 // Sanitize function
@@ -152,7 +155,7 @@ async function importIndividuals() {
         }
 
         if (!phone) {
-          throw new Error("رقم الجوال مطلوب");
+          console.log(`⚠️  الصف ${rowIndex}: ${fullName} - رقم الجوال مفقود`);
         }
 
         if (!packageName) {
