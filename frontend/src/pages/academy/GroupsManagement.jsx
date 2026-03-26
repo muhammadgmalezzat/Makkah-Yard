@@ -17,6 +17,15 @@ export default function GroupsManagement() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Edit modal state
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    schedule: "",
+    maxCapacity: 0,
+    isActive: true,
+  });
+
   // Fetch all sports for dropdown
   const { data: sports = [] } = useQuery({
     queryKey: ["sports"],
@@ -78,6 +87,31 @@ export default function GroupsManagement() {
     }
   };
 
+  const openEditModal = (group) => {
+    setEditingGroup(group);
+    setEditForm({
+      name: group.name,
+      schedule: group.schedule,
+      maxCapacity: group.maxCapacity,
+      isActive: group.isActive,
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingGroup(null);
+  };
+
+  const handleEditSubmit = async () => {
+    try {
+      await axios.put(`/academy/groups/${editingGroup._id}`, editForm);
+      closeEditModal();
+      refetchGroups();
+    } catch (error) {
+      console.error("Update failed:", error);
+      alert(error.response?.data?.message || "حدث خطأ");
+    }
+  };
+
   const getCapacityColor = (groupId) => {
     const group = groups.find((g) => g._id === groupId);
     if (!group) return "bg-gray-300";
@@ -99,9 +133,9 @@ export default function GroupsManagement() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">إدارة المجموعات</h1>
+        <h1 className="text-xl sm:text-3xl font-bold">إدارة المجموعات</h1>
         {user?.role === "admin" && (
           <button
             onClick={() => setIsFormOpen(!isFormOpen)}
@@ -114,7 +148,7 @@ export default function GroupsManagement() {
 
       {/* Form */}
       {isFormOpen && user?.role === "admin" && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
           <h2 className="text-xl font-bold text-right mb-4">
             إضافة مجموعة جديدة
           </h2>
@@ -235,7 +269,7 @@ export default function GroupsManagement() {
           لا توجد مجموعات للعرض
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {groups.map((group) => {
             const percentage = (group.currentCount / group.maxCapacity) * 100;
             return (
@@ -291,9 +325,118 @@ export default function GroupsManagement() {
                     {percentage.toFixed(0)}% مستخدمة
                   </span>
                 </div>
+
+                {user?.role === "admin" && (
+                  <div className="flex justify-end mt-3 pt-3 border-t">
+                    <button
+                      onClick={() => openEditModal(group)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      ✏️ تعديل
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingGroup && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4"
+          dir="rtl"
+        >
+          <div className="bg-white rounded-t-2xl sm:rounded-xl p-4 sm:p-6 w-full sm:w-auto sm:max-w-lg shadow-xl">
+            <h2 className="text-xl font-bold mb-4">
+              تعديل مجموعة: {editingGroup.name}
+            </h2>
+            <p className="text-gray-500 text-sm mb-4">
+              الرياضة: {editingGroup.sportId?.name}
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  اسم المجموعة
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, name: e.target.value })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  الجدول الزمني
+                </label>
+                <input
+                  type="text"
+                  value={editForm.schedule}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, schedule: e.target.value })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  الطاقة الاستيعابية
+                </label>
+                <input
+                  type="number"
+                  value={editForm.maxCapacity}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      maxCapacity: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min="1"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={editForm.isActive}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, isActive: e.target.checked })
+                  }
+                  className="w-4 h-4"
+                />
+                <label
+                  htmlFor="isActive"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  المجموعة نشطة
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleEditSubmit}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
+              >
+                حفظ التعديلات
+              </button>
+              <button
+                onClick={closeEditModal}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

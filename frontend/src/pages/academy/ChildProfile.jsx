@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "../../api/axios";
 
 export default function ChildProfile() {
   const { memberId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // State for modals and operations
   const [selectedSubscription, setSelectedSubscription] = useState(null);
@@ -132,6 +133,9 @@ export default function ChildProfile() {
       );
 
       setChangeSuccess("تم تغيير الرياضة بنجاح");
+      // Invalidate CoachList cache to force refetch with new data
+      queryClient.invalidateQueries({ queryKey: ["activeTodayMembers"] });
+
       setTimeout(() => {
         setShowChangeSportModal(false);
         setChangeFormData({ sportId: "", groupId: "" });
@@ -167,6 +171,9 @@ export default function ChildProfile() {
       );
 
       setChangeSuccess("تم تغيير المجموعة بنجاح");
+      // Invalidate CoachList cache to force refetch with new data
+      queryClient.invalidateQueries({ queryKey: ["activeTodayMembers"] });
+
       setTimeout(() => {
         setShowChangeGroupModal(false);
         setChangeFormData({ sportId: "", groupId: "" });
@@ -201,10 +208,12 @@ export default function ChildProfile() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
+      <div className="flex justify-center items-center min-h-screen p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل الملف الشخصي...</p>
+          <p className="text-gray-600 text-sm sm:text-base">
+            جاري تحميل الملف الشخصي...
+          </p>
         </div>
       </div>
     );
@@ -212,9 +221,11 @@ export default function ChildProfile() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <p className="text-red-700 font-semibold">خطأ في تحميل البيانات</p>
-        <p className="text-red-600 text-sm mt-2">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 text-center m-4 sm:m-6">
+        <p className="text-red-700 font-semibold text-sm sm:text-base">
+          خطأ في تحميل البيانات
+        </p>
+        <p className="text-red-600 text-xs sm:text-sm mt-2">
           {error?.response?.data?.message || "حاول مرة أخرى"}
         </p>
       </div>
@@ -223,8 +234,10 @@ export default function ChildProfile() {
 
   if (!profile) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-        <p className="text-gray-600">لم يتم العثور على بيانات الطفل</p>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6 text-center m-4 sm:m-6">
+        <p className="text-gray-600 text-sm sm:text-base">
+          لم يتم العثور على بيانات الطفل
+        </p>
       </div>
     );
   }
@@ -232,40 +245,42 @@ export default function ChildProfile() {
   const { member, subscriptions, totalPaid, activeCount } = profile;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <button
           onClick={() => navigate("/academy/sports")}
-          className="text-blue-600 hover:text-blue-700 font-semibold mb-4 flex items-center gap-2"
+          className="text-blue-600 hover:text-blue-700 font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base min-h-[44px] flex items-center"
         >
           ← العودة
         </button>
-        <h1 className="text-3xl font-bold text-gray-900 text-right">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 text-right">
           ملف شخصي: {member.fullName}
         </h1>
       </div>
 
       {/* Member Info Card */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {/* Name */}
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">الاسم</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">الاسم</p>
+            <p className="text-base sm:text-lg font-semibold text-gray-900">
               {member.fullName}
             </p>
           </div>
 
           {/* Age and Gender */}
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">العمر والنوع</p>
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">
+              العمر والنوع
+            </p>
             <div className="flex items-center gap-2 justify-end">
-              <span className="text-lg font-semibold text-gray-900">
+              <span className="text-base sm:text-lg font-semibold text-gray-900">
                 {member.age || "-"} سنة
               </span>
               <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${
                   member.gender === "male"
                     ? "bg-blue-100 text-blue-700"
                     : "bg-pink-100 text-pink-700"
@@ -278,32 +293,36 @@ export default function ChildProfile() {
 
           {/* Phone */}
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">الهاتف</p>
-            <p className="text-lg font-semibold text-gray-900 ltr">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">الهاتف</p>
+            <p className="text-base sm:text-lg font-semibold text-gray-900 ltr">
               {member.phone || "-"}
             </p>
           </div>
 
           {/* Birth Date */}
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">تاريخ الميلاد</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">
+              تاريخ الميلاد
+            </p>
+            <p className="text-base sm:text-lg font-semibold text-gray-900">
               {formatDate(member.dateOfBirth)}
             </p>
           </div>
 
           {/* Guardian Name */}
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">ولي الأمر</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">ولي الأمر</p>
+            <p className="text-base sm:text-lg font-semibold text-gray-900">
               {member.guardianName || "-"}
             </p>
           </div>
 
           {/* Guardian Phone */}
           <div className="text-right">
-            <p className="text-sm text-gray-600 mb-1">هاتف ولي الأمر</p>
-            <p className="text-lg font-semibold text-gray-900 ltr">
+            <p className="text-xs sm:text-sm text-gray-600 mb-1">
+              هاتف ولي الأمر
+            </p>
+            <p className="text-base sm:text-lg font-semibold text-gray-900 ltr">
               {member.guardianPhone || "-"}
             </p>
           </div>
@@ -311,18 +330,28 @@ export default function ChildProfile() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-right">
-          <p className="text-sm text-blue-600 mb-1">الاشتراكات النشطة</p>
-          <p className="text-3xl font-bold text-blue-900">{activeCount}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-right">
+          <p className="text-xs sm:text-sm text-blue-600 mb-1">
+            الاشتراكات النشطة
+          </p>
+          <p className="text-2xl sm:text-3xl font-bold text-blue-900">
+            {activeCount}
+          </p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-right">
-          <p className="text-sm text-green-600 mb-1">إجمالي المبلغ المدفوع</p>
-          <p className="text-3xl font-bold text-green-900">{totalPaid} ر.س</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 text-right">
+          <p className="text-xs sm:text-sm text-green-600 mb-1">
+            إجمالي المبلغ المدفوع
+          </p>
+          <p className="text-2xl sm:text-3xl font-bold text-green-900">
+            {totalPaid} ر.س
+          </p>
         </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-right">
-          <p className="text-sm text-purple-600 mb-1">إجمالي الاشتراكات</p>
-          <p className="text-3xl font-bold text-purple-900">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 text-right">
+          <p className="text-xs sm:text-sm text-purple-600 mb-1">
+            إجمالي الاشتراكات
+          </p>
+          <p className="text-2xl sm:text-3xl font-bold text-purple-900">
             {subscriptions.length}
           </p>
         </div>
@@ -330,32 +359,34 @@ export default function ChildProfile() {
 
       {/* Subscriptions Section */}
       <div>
-        <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-300">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 pb-2 border-b-2 border-gray-300 gap-4">
           <button
             onClick={handleAddSport}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-green-700 transition min-h-[44px] flex items-center justify-center w-full sm:w-auto"
           >
             + إضافة رياضة
           </button>
-          <h2 className="text-2xl font-bold">الاشتراكات</h2>
+          <h2 className="text-lg sm:text-2xl font-bold">الاشتراكات</h2>
         </div>
 
         {subscriptions.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-            <p className="text-gray-600">لا توجد اشتراكات حالياً</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-8 text-center">
+            <p className="text-gray-600 text-sm sm:text-base">
+              لا توجد اشتراكات حالياً
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {subscriptions.map((sub) => (
               <div
                 key={sub._id}
-                className={`bg-white rounded-lg shadow-sm border border-gray-200 p-5 ${getStatusColor(sub.status)} hover:shadow-md transition`}
+                className={`bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-5 ${getStatusColor(sub.status)} hover:shadow-md transition`}
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 items-start">
                   {/* Sport */}
                   <div className="text-right">
                     <p className="text-xs text-gray-500 mb-1">الرياضة</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">
                       {sub.sport?.name}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
@@ -366,7 +397,7 @@ export default function ChildProfile() {
                   {/* Group */}
                   <div className="text-right">
                     <p className="text-xs text-gray-500 mb-1">المجموعة</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">
                       {sub.group?.name}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
@@ -389,11 +420,11 @@ export default function ChildProfile() {
                   {/* Duration & Price */}
                   <div className="text-right">
                     <p className="text-xs text-gray-500 mb-1">المدة والسعر</p>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900">
                       {sub.durationMonths}
                       {sub.durationMonths >= 12 ? " سنة" : " شهر"}
                     </p>
-                    <p className="text-sm text-green-700 font-bold mt-1">
+                    <p className="text-xs sm:text-sm text-green-700 font-bold mt-1">
                       {sub.pricePaid} ر.س
                     </p>
                   </div>
@@ -427,7 +458,7 @@ export default function ChildProfile() {
                         onClick={() =>
                           navigate(`/subscriptions/${member._id}/renew`)
                         }
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition whitespace-nowrap"
+                        className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-green-700 transition whitespace-nowrap min-h-[44px] flex items-center justify-center"
                       >
                         تجديد
                       </button>
@@ -438,7 +469,7 @@ export default function ChildProfile() {
                             setSelectedSubscription(sub);
                             setShowChangeSportModal(true);
                           }}
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition whitespace-nowrap"
+                          className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-purple-700 transition whitespace-nowrap min-h-[44px] flex items-center justify-center"
                         >
                           تغيير رياضة
                         </button>

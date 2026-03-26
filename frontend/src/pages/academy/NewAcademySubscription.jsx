@@ -14,6 +14,7 @@ export default function NewAcademySubscription() {
   // Step 1: Child Type
   const [childType, setChildType] = useState("");
   const [parentAccount, setParentAccount] = useState(null);
+  const [parentSubscriptionId, setParentSubscriptionId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -54,6 +55,32 @@ export default function NewAcademySubscription() {
   const [success, setSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
+  // Check if coming from AddSubMember with pre-selected parent account
+  useEffect(() => {
+    if (!location.state) return;
+
+    if (location.state.memberType === "linked") {
+      setChildType("linked");
+      setParentSubscriptionId(location.state.parentSubscriptionId);
+      console.log("Set from navigation:", {
+        memberType: "linked",
+        parentSubscriptionId: location.state.parentSubscriptionId,
+      });
+      // Skip step 1 (type selection) and go directly to step 2
+      setStep(2);
+    }
+
+    if (location.state.prefillChild) {
+      setChildData((prev) => ({
+        ...prev,
+        fullName: location.state.prefillChild.fullName || "",
+        gender: location.state.prefillChild.gender || "",
+        dateOfBirth: location.state.prefillChild.dateOfBirth || "",
+      }));
+      console.log("Prefilled child data:", location.state.prefillChild);
+    }
+  }, [location.state]);
+
   // Fetch sports based on child gender
   const { data: sports = [] } = useQuery({
     queryKey: ["sports", childData.gender],
@@ -82,7 +109,7 @@ export default function NewAcademySubscription() {
 
   // Fetch monthly academy package for selected sport
   const { data: monthlyPackage } = useQuery({
-    queryKey: ["packages-academy-monthly", selectedSport?._id],
+    queryKey: ["packages-academy-monthly", selectedSport?._id, childType],
     queryFn: async () => {
       if (!selectedSport) return null;
 
@@ -99,11 +126,15 @@ export default function NewAcademySubscription() {
         selectedSport.name;
       console.log("Selected sport:", selectedSport);
       console.log("Sport value for API:", sportValue);
+      console.log("childType:", childType);
 
       try {
+        // Use different category based on member type
+        const category = childType === "linked" ? "sub_child" : "academy_only";
+
         const monthlyRes = await axios.get("/packages", {
           params: {
-            category: "academy_only",
+            category: category,
             sport: sportValue,
             isFlexibleDuration: "true",
             isActive: "true",
@@ -124,9 +155,11 @@ export default function NewAcademySubscription() {
 
   // Fetch annual academy package for selected sport
   const { data: annualPackage } = useQuery({
-    queryKey: ["packages-academy-annual", selectedSport?._id],
+    queryKey: ["packages-academy-annual", selectedSport?._id, childType],
     queryFn: async () => {
       if (!selectedSport) return null;
+      // Sub child members don't have annual packages, skip fetching
+      if (childType === "linked") return null;
 
       // Map Arabic sport names to English for API queries
       const sportMap = {
@@ -159,7 +192,7 @@ export default function NewAcademySubscription() {
         return null;
       }
     },
-    enabled: !!selectedSport,
+    enabled: !!selectedSport && childType !== "linked",
   });
 
   // Calculate price based on months and packages
@@ -222,10 +255,23 @@ export default function NewAcademySubscription() {
         const response = await axios.get(
           `/subscriptions/search?q=${encodeURIComponent(searchQuery)}`,
         );
-        setSearchResults(response.data);
+        console.log("Search response:", response.data);
+
+        // Extract array from response.data.data
+        const allResults = response.data.data || [];
+
+        // Filter to show only primary members with active subscriptions
+        const filtered = allResults.filter(
+          (r) =>
+            r.member?.role === "primary" &&
+            r.lastSubscription?.status === "active",
+        );
+
+        setSearchResults(filtered);
         setShowSearchResults(true);
       } catch (err) {
         console.error("Search error:", err);
+        setSearchResults([]);
       }
     };
 
@@ -243,6 +289,7 @@ export default function NewAcademySubscription() {
 
   const handleSelectParentAccount = (account) => {
     setParentAccount(account);
+    setParentSubscriptionId(account.lastSubscription?._id);
     setSearchQuery("");
     setSearchResults([]);
     setShowSearchResults(false);
@@ -375,7 +422,7 @@ export default function NewAcademySubscription() {
             groupId: selectedGroup._id,
             memberType: childType || "standalone",
             parentSubscriptionId:
-              childType === "linked" ? parentAccount?.subscriptionId : null,
+              childType === "linked" ? parentSubscriptionId : null,
             durationMonths: parseInt(durationMonths),
             startDate: startDate,
             paymentData: {
@@ -384,6 +431,11 @@ export default function NewAcademySubscription() {
             },
           };
 
+          console.log("=== SENDING TO BACKEND ===");
+          console.log("memberType:", payload.memberType);
+          console.log("parentSubscriptionId:", payload.parentSubscriptionId);
+          console.log("childType state:", childType);
+          console.log("parentSubscriptionId state:", parentSubscriptionId);
           console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
 
           const response = await axios.post("/academy/subscriptions", payload);
@@ -458,15 +510,17 @@ export default function NewAcademySubscription() {
   // Step 1: Child Type
   if (step === 0) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
           تسجيل اشتراك أكاديمية جديد
         </h1>
 
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-right">اختر نوع الاشتراك</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-right">
+            اختر نوع الاشتراك
+          </h2>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setChildType("linked")}
               className={`p-6 rounded-lg border-2 text-center transition ${
@@ -515,27 +569,38 @@ export default function NewAcademySubscription() {
                       لا توجد نتائج
                     </div>
                   ) : (
-                    searchResults.map((result) => (
-                      <button
-                        key={result.subscriptionId}
-                        onClick={() => handleSelectParentAccount(result)}
-                        className="w-full text-right p-3 border-b hover:bg-blue-50 transition"
-                      >
-                        <p className="font-semibold">{result.memberName}</p>
-                        <p className="text-sm text-gray-600">{result.phone}</p>
-                        <p className="text-sm text-blue-600">
-                          {result.packageName}
-                        </p>
-                      </button>
-                    ))
+                    searchResults.map((result) => {
+                      const memberName = result.member?.fullName || "Unknown";
+                      const phone = result.member?.phone || "-";
+                      const packageName =
+                        result.lastSubscription?.packageId?.name || "لا يوجد";
+
+                      return (
+                        <button
+                          key={
+                            result.lastSubscription?._id || result.member?._id
+                          }
+                          onClick={() => handleSelectParentAccount(result)}
+                          className="w-full text-right p-3 border-b hover:bg-blue-50 transition"
+                        >
+                          <p className="font-semibold">{memberName}</p>
+                          <p className="text-sm text-gray-600">{phone}</p>
+                          <p className="text-sm text-blue-600">{packageName}</p>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               )}
 
               {parentAccount && (
                 <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-right">
-                  <p className="font-semibold">{parentAccount.memberName}</p>
-                  <p className="text-sm text-gray-600">{parentAccount.phone}</p>
+                  <p className="font-semibold">
+                    {parentAccount.member?.fullName || parentAccount.memberName}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {parentAccount.member?.phone || parentAccount.phone}
+                  </p>
                 </div>
               )}
             </div>
@@ -564,8 +629,10 @@ export default function NewAcademySubscription() {
   // Step 2: Child Info
   if (step === 2) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">معلومات الطفل</h1>
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
+          معلومات الطفل
+        </h1>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -714,8 +781,10 @@ export default function NewAcademySubscription() {
       childData.gender === "male" ? ["male", "both"] : ["female", "both"];
 
     return (
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">اختر الرياضة</h1>
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
+          اختر الرياضة
+        </h1>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

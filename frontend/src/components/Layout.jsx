@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
@@ -9,7 +10,7 @@ const navItems = [
     label: "إضافة عضو فرعي",
     icon: "👤",
   },
-  { to: "/subscriptions/search", label: "البحث عن الاشتراكات", icon: "🔍" },
+  { to: "/subscriptions/search", label: "دليل الأعضاء", icon: "🔍" },
   { to: "/packages", label: "الحزم والأسعار", icon: "📦" },
   { type: "divider" },
   { label: "الأكاديمية", type: "section" },
@@ -19,6 +20,14 @@ const navItems = [
   { to: "/academy/new", label: "تسجيل اشتراك جديد", icon: "📝" },
   { to: "/academy/expiring", label: "الاشتراكات المنتهية", icon: "⏰" },
   { to: "/academy/coach-list", label: "قائمة المدرب", icon: "📋" },
+  { type: "divider" },
+  { label: "الإدارة", type: "section", roles: ["admin", "owner"] },
+  {
+    to: "/messaging",
+    label: "إرسال رسائل",
+    icon: "💬",
+    roles: ["admin", "owner"],
+  },
 ];
 
 const roleLabels = {
@@ -30,6 +39,7 @@ const roleLabels = {
 };
 
 export default function Layout() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
@@ -40,11 +50,40 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50" dir="rtl">
+    <div className="flex h-screen bg-gray-50 flex-col lg:flex-row" dir="rtl">
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 right-4 z-50 bg-white shadow-md rounded-lg p-2 min-h-[44px] w-[44px] flex items-center justify-center"
+      >
+        ☰
+      </button>
+
+      {/* Sidebar Overlay (Mobile) */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-gray-950 text-white flex flex-col shrink-0">
+      <div
+        className={`
+        fixed top-0 right-0 h-full w-64 bg-gray-950 text-white flex flex-col shrink-0 z-40
+        transform transition-transform duration-300
+        ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}
+        lg:translate-x-0 lg:shadow-none lg:border-l lg:relative lg:w-64
+      `}
+      >
         {/* Logo */}
-        <div className="px-6 py-6 border-b border-gray-800">
+        <div className="px-6 py-6 border-b border-gray-800 relative">
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden absolute top-4 left-4 text-gray-500 text-xl min-h-[44px] w-[44px] flex items-center justify-center"
+          >
+            ✕
+          </button>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-lg font-black">
               م
@@ -59,6 +98,11 @@ export default function Layout() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map((item, index) => {
+            // Check role-based visibility
+            if (item.roles && !item.roles.includes(user?.role)) {
+              return null;
+            }
+
             if (item.type === "divider") {
               return (
                 <div
@@ -122,16 +166,18 @@ export default function Layout() {
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
               نظام نادي مكة الرياضي
             </h2>
-            <p className="text-sm text-gray-400">إدارة العمليات الداخلية</p>
+            <p className="text-xs sm:text-sm text-gray-400">
+              إدارة العمليات الداخلية
+            </p>
           </div>
-          <div className="text-sm text-gray-400">
+          <div className="text-xs sm:text-sm text-gray-400">
             {new Date().toLocaleDateString("ar-SA", {
               weekday: "long",
               year: "numeric",
@@ -142,7 +188,7 @@ export default function Layout() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6 md:p-8">
+        <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </div>

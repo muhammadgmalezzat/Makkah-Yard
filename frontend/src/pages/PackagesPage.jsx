@@ -45,19 +45,21 @@ export default function PackagesPage() {
     <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">الحزم والأسعار</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+          الحزم والأسعار
+        </h1>
+        <p className="text-gray-500 mt-1 text-sm sm:text-base">
           {!isLoading && `${packages.length} حزمة متاحة`}
         </p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex gap-1 flex-wrap">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex gap-1 flex-wrap overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-2">
         {categories.map((cat) => (
           <button
             key={cat.value}
             onClick={() => setCategoryFilter(cat.value)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap min-h-[44px] flex items-center justify-center
               ${
                 categoryFilter === cat.value
                   ? "bg-blue-600 text-white shadow-sm"
@@ -111,11 +113,11 @@ export default function PackagesPage() {
       )}
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {packages.map((pkg) => (
           <div
             key={pkg._id}
-            className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition p-6 flex flex-col"
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition p-4 sm:p-6 flex flex-col"
           >
             {/* Top */}
             <div className="flex items-start justify-between gap-2 mb-4">

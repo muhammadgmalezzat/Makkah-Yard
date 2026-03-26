@@ -28,6 +28,11 @@ const createAcademySubscription = async ({
   userId,
 }) => {
   try {
+    console.log("=== createAcademySubscription START ===");
+    console.log("memberType:", memberType);
+    console.log("parentSubscriptionId:", parentSubscriptionId);
+    console.log("userId:", userId);
+
     // 1. Find and validate sport
     const sport = await Sport.findById(sportId);
     if (!sport) {
@@ -82,7 +87,17 @@ const createAcademySubscription = async ({
         throw new Error("معرف الاشتراك الأب مطلوب للأعضاء المرتبطين");
       }
 
+      console.log("=== ACCOUNT ID LOGIC ===");
+      console.log("Is linked?", memberType === "linked");
+      console.log("Has parentSubId?", !!parentSubscriptionId);
+      console.log("Looking up Subscription with ID:", parentSubscriptionId);
+
       parentSub = await Subscription.findById(parentSubscriptionId);
+      console.log("parentSub found?", !!parentSub);
+      if (parentSub) {
+        console.log("parentSub.accountId:", parentSub.accountId);
+      }
+
       if (!parentSub) {
         throw new Error("اشتراك ولي الأمر غير موجود");
       }
@@ -126,27 +141,51 @@ const createAcademySubscription = async ({
     }
 
     let childAccount = null;
+    let childAccountId;
+
     if (!child) {
-      // Create a temporary account for the child
-      const [newChildAccount] = await Account.create([
-        {
-          type: memberType === "linked" ? "family" : "academy_only",
-          status: "active",
-          createdBy: userId,
-        },
-      ]);
-      childAccount = newChildAccount;
+      // Determine accountId based on membership type
+      if (memberType === "linked" && parentSub) {
+        // For linked children, use parent subscription's accountId
+        childAccountId = parentSub.accountId;
+        childAccount = await Account.findById(childAccountId);
+      } else {
+        // For standalone children, create new academy_only account
+        const [newChildAccount] = await Account.create([
+          {
+            type: "academy_only",
+            status: "active",
+            createdBy: userId,
+          },
+        ]);
+        childAccount = newChildAccount;
+        childAccountId = newChildAccount._id;
+      }
+
+      console.log("Final childAccountId:", childAccountId);
+      console.log(
+        "Source:",
+        memberType === "linked" ? "FROM PARENT SUB" : "NEW ACCOUNT",
+      );
 
       child = new Member({
         ...sanitizedChildData,
-        accountId: childAccount._id,
+        accountId: childAccountId,
         role: "child",
         guardianAccountId: null,
       });
       await child.save();
+
+      console.log("Member created:", {
+        _id: child._id,
+        fullName: child.fullName,
+        accountId: child.accountId,
+        role: child.role,
+      });
     } else {
       // If child exists, get their account
       childAccount = await Account.findById(child.accountId);
+      childAccountId = child.accountId;
     }
 
     // 8. Create AcademySubscription

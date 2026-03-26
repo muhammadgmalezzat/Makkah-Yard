@@ -39,6 +39,7 @@ export default function AddSubMember() {
   });
 
   const [calculatedAge, setCalculatedAge] = useState(null);
+  const [parentSubscriptionId, setParentSubscriptionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -87,16 +88,23 @@ export default function AddSubMember() {
         const response = await axios.get(
           `/subscriptions/search?q=${encodeURIComponent(searchQuery)}`,
         );
-        // Filter for family accounts only
-        const familyResults = response.data.filter((sub) => {
-          // We need to fetch account details to check type
-          // For now, we'll get all and verify later
-          return true;
-        });
-        setSearchResults(response.data);
+        console.log("Search response:", response.data);
+
+        // Extract array from response.data.data
+        const allResults = response.data.data || [];
+
+        // Filter to show only primary members with active gym subscriptions
+        const familyResults = allResults.filter(
+          (r) =>
+            r.member?.role === "primary" &&
+            r.lastSubscription?.status === "active",
+        );
+
+        setSearchResults(familyResults);
         setShowSearchResults(true);
       } catch (err) {
         console.error("Search failed", err);
+        setSearchResults([]);
       }
     };
 
@@ -128,9 +136,13 @@ export default function AddSubMember() {
     setAccountError("");
     setError("");
     try {
-      const subDetails = await axios.get(
-        `/subscriptions/${result.subscriptionId}`,
-      );
+      const subscriptionId = result.lastSubscription?._id;
+      if (!subscriptionId) {
+        setAccountError("معرف الاشتراك غير موجود");
+        return;
+      }
+
+      const subDetails = await axios.get(`/subscriptions/${subscriptionId}`);
       const subscription = subDetails.data;
 
       // Verify it's a family account
@@ -140,6 +152,7 @@ export default function AddSubMember() {
       }
 
       setSelectedAccount(subscription.accountId._id);
+      setParentSubscriptionId(subscriptionId);
       setPrimaryMember(subscription.memberId);
       setSearchQuery("");
       setShowSearchResults(false);
@@ -303,20 +316,26 @@ export default function AddSubMember() {
   if (success) {
     return (
       <div className="max-w-2xl mx-auto">
-        <div className="bg-green-100 border border-green-400 text-green-700 px-6 py-8 rounded-lg text-center">
-          <h2 className="text-2xl font-bold mb-4">
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 sm:px-6 py-6 sm:py-8 rounded-lg text-center space-y-4">
+          <h2 className="text-xl sm:text-2xl font-bold">
             ✓ تم إضافة العضو الفرعي بنجاح
           </h2>
-          <p className="text-lg mb-2">
+          <p className="text-base sm:text-lg">
             الحساب الأساسي: {successData.primaryName}
           </p>
-          <p className="text-lg mb-2">اسم العضو: {successData.memberName}</p>
-          <p className="text-lg mb-2">الباقة: {successData.packageName}</p>
-          <p className="text-lg mb-2">السعر: {successData.price} ريال</p>
-          <p className="text-lg mb-4">
+          <p className="text-base sm:text-lg">
+            اسم العضو: {successData.memberName}
+          </p>
+          <p className="text-base sm:text-lg">
+            الباقة: {successData.packageName}
+          </p>
+          <p className="text-base sm:text-lg">
+            السعر: {successData.price} ريال
+          </p>
+          <p className="text-base sm:text-lg">
             من {successData.startDate} إلى {successData.endDate}
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <button
               onClick={() => {
                 setSuccess(false);
@@ -330,13 +349,13 @@ export default function AddSubMember() {
                   dateOfBirth: "",
                 });
               }}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 min-h-[44px] flex items-center justify-center"
             >
               إضافة عضو آخر
             </button>
             <button
               onClick={() => navigate("/subscriptions/search")}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 min-h-[44px] flex items-center justify-center"
             >
               عرض الاشتراكات
             </button>
@@ -350,13 +369,15 @@ export default function AddSubMember() {
   if (!selectedAccount) {
     return (
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-right mb-6">إضافة عضو فرعي</h1>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-right mb-4">
+        <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
+          إضافة عضو فرعي
+        </h1>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-right mb-4">
             1. البحث عن حساب عائلي
           </h2>
 
-          <label className="block text-right font-semibold mb-2">
+          <label className="block text-right font-semibold mb-2 text-sm sm:text-base">
             ابحث باسم العضو الأساسي أو رقم الهاتف
           </label>
           <input
@@ -377,19 +398,24 @@ export default function AddSubMember() {
 
           {showSearchResults && searchResults.length > 0 && (
             <div className="space-y-2">
-              {searchResults.map((result) => (
-                <button
-                  key={result.subscriptionId}
-                  onClick={() => handleSelectAccount(result)}
-                  className="w-full p-3 text-right border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition"
-                >
-                  <div className="font-semibold">{result.memberName}</div>
-                  <div className="text-sm text-gray-600">{result.phone}</div>
-                  <div className="text-sm text-gray-500">
-                    {result.packageName}
-                  </div>
-                </button>
-              ))}
+              {searchResults.map((result) => {
+                const memberName = result.member?.fullName || "Unknown";
+                const phone = result.member?.phone || "-";
+                const packageName =
+                  result.lastSubscription?.packageId?.name || "لا يوجد";
+
+                return (
+                  <button
+                    key={result.lastSubscription?._id || result.member?._id}
+                    onClick={() => handleSelectAccount(result)}
+                    className="w-full p-3 text-right border border-gray-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition"
+                  >
+                    <div className="font-semibold">{memberName}</div>
+                    <div className="text-sm text-gray-600">{phone}</div>
+                    <div className="text-sm text-gray-500">{packageName}</div>
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -408,10 +434,12 @@ export default function AddSubMember() {
   // Section 2: Add Sub Member Steps
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-right mb-6">إضافة عضو فرعي</h1>
+      <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
+        إضافة عضو فرعي
+      </h1>
 
       {/* Account info */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-right">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 mb-6 text-right">
         <h3 className="font-bold text-lg mb-2">{primaryMember.fullName}</h3>
         <p className="text-sm text-gray-600">حساب عائلي</p>
         <div className="mt-2 text-sm">
@@ -435,13 +463,13 @@ export default function AddSubMember() {
       {/* Step 1: Member Type */}
       {step === 1 && (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-right">
+          <h2 className="text-lg sm:text-xl font-bold text-right">
             اختر نوع العضو الفرعي
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setMemberType("sub_adult")}
-              className={`p-6 rounded-lg border-2 text-center transition ${
+              className={`p-6 rounded-lg border-2 text-center transition min-h-[120px] flex flex-col items-center justify-center ${
                 memberType === "sub_adult"
                   ? "border-blue-600 bg-blue-50"
                   : "border-gray-300 hover:border-gray-400"
@@ -454,8 +482,16 @@ export default function AddSubMember() {
             </button>
 
             <button
-              onClick={() => setMemberType("sub_child")}
-              className={`p-6 rounded-lg border-2 text-center transition ${
+              onClick={() =>
+                navigate("/academy/new", {
+                  state: {
+                    memberType: "linked",
+                    parentSubscriptionId: parentSubscriptionId,
+                    parentAccountId: selectedAccount,
+                  },
+                })
+              }
+              className={`p-6 rounded-lg border-2 text-center transition min-h-[120px] flex flex-col items-center justify-center ${
                 memberType === "sub_child"
                   ? "border-blue-600 bg-blue-50"
                   : "border-gray-300 hover:border-gray-400"
@@ -473,10 +509,12 @@ export default function AddSubMember() {
       {/* Step 2: Package Selection */}
       {step === 2 && (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-right">اختر الباقة</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-right">
+            اختر الباقة
+          </h2>
 
           {memberType === "sub_adult" && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {subAdultPackages.map((pkg) => {
                 const pkgMonths = pkg.durationMonths || 3;
                 const testEndDate = new Date(startDate);
@@ -488,7 +526,7 @@ export default function AddSubMember() {
                     key={pkg._id}
                     onClick={() => !disabled && setSelectedPackage(pkg)}
                     disabled={disabled}
-                    className={`p-4 rounded-lg border-2 text-center transition ${
+                    className={`p-4 rounded-lg border-2 text-center transition min-h-[120px] flex flex-col items-center justify-center ${
                       disabled
                         ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
                         : selectedPackage?._id === pkg._id
@@ -516,7 +554,7 @@ export default function AddSubMember() {
             <div className="space-y-6">
               <div>
                 <h3 className="font-bold text-right mb-4">اختر الرياضة</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {SPORTS.map((sport) => {
                     const pkg = subChildPackages.find(
                       (p) => p.sport === sport.id,
@@ -662,6 +700,35 @@ export default function AddSubMember() {
                   العمر: {calculatedAge} سنة
                 </div>
               )}
+
+              {memberType === "sub_child" &&
+                calculatedAge !== null &&
+                calculatedAge < 15 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                    <p className="text-blue-800 font-medium mb-3">
+                      العضو تحت 15 سنة — يجب تسجيله عبر الأكاديمية
+                    </p>
+                    <button
+                      onClick={() =>
+                        navigate("/academy/new", {
+                          state: {
+                            memberType: "linked",
+                            parentSubscriptionId: parentSubscriptionId,
+                            parentAccountId: selectedAccount,
+                            prefillChild: {
+                              fullName: memberData.fullName,
+                              gender: memberData.gender,
+                              dateOfBirth: memberData.dateOfBirth,
+                            },
+                          },
+                        })
+                      }
+                      className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+                    >
+                      الانتقال لتسجيل اشتراك أكاديمية ←
+                    </button>
+                  </div>
+                )}
             </div>
           )}
 
@@ -700,7 +767,9 @@ export default function AddSubMember() {
       {/* Step 4: Confirm */}
       {step === 4 && (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold text-right">مراجعة البيانات</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-right">
+            مراجعة البيانات
+          </h2>
 
           <div>
             <label className="block text-right font-semibold mb-2">
@@ -717,7 +786,7 @@ export default function AddSubMember() {
             <label className="block text-right font-semibold mb-3">
               طريقة الدفع
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 { id: "cash", name: "نقد" },
                 { id: "network", name: "شبكة" },
@@ -726,7 +795,7 @@ export default function AddSubMember() {
                 <button
                   key={method.id}
                   onClick={() => setPaymentMethod(method.id)}
-                  className={`p-3 rounded-lg border-2 transition text-center ${
+                  className={`p-3 rounded-lg border-2 transition text-center min-h-[44px] flex items-center justify-center ${
                     paymentMethod === method.id
                       ? "border-blue-600 bg-blue-50"
                       : "border-gray-300 hover:border-gray-400"
@@ -745,25 +814,25 @@ export default function AddSubMember() {
             </div>
           )}
 
-          <div className="bg-gray-50 p-6 rounded-lg text-right space-y-3 border border-gray-200">
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg text-right space-y-3 border border-gray-200">
             <h3 className="font-bold text-lg mb-4">الملخص</h3>
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-2">
               <span>{memberData.fullName}</span>
               <span className="text-gray-600">الاسم:</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-2">
               <span>{selectedPackage.name}</span>
               <span className="text-gray-600">الباقة:</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-2">
               <span>{new Date(startDate).toLocaleDateString("ar-SA")}</span>
               <span className="text-gray-600">البداية:</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-2">
               <span>{subEndDate.toLocaleDateString("ar-SA")}</span>
               <span className="text-gray-600">النهاية:</span>
             </div>
-            <div className="border-t pt-3 flex justify-between font-bold text-lg">
+            <div className="border-t pt-3 flex flex-col sm:flex-row justify-between gap-2 font-bold text-lg">
               <span>{currentPrice} ريال</span>
               <span>الإجمالي:</span>
             </div>
@@ -772,31 +841,38 @@ export default function AddSubMember() {
       )}
 
       {/* Buttons */}
-      <div className="flex justify-between gap-4 mt-6">
-        {step > 0 && (
+      {!(
+        step === 3 &&
+        memberType === "sub_child" &&
+        calculatedAge !== null &&
+        calculatedAge < 15
+      ) && (
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mt-6">
+          {step > 0 && (
+            <button
+              onClick={() => setStep(step - 1)}
+              className="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 min-h-[44px] flex items-center justify-center"
+            >
+              السابق
+            </button>
+          )}
           <button
-            onClick={() => setStep(step - 1)}
-            className="flex-1 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+            onClick={handleSubmit}
+            disabled={loading || exceedsEndDate}
+            className={`flex-1 px-6 py-2 rounded-lg text-white min-h-[44px] flex items-center justify-center ${
+              exceedsEndDate
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            }`}
           >
-            السابق
+            {loading
+              ? "جاري المعالجة..."
+              : step === 4
+                ? "إضافة العضو الفرعي"
+                : "التالي"}
           </button>
-        )}
-        <button
-          onClick={handleSubmit}
-          disabled={loading || exceedsEndDate}
-          className={`flex-1 px-6 py-2 rounded-lg text-white ${
-            exceedsEndDate
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          }`}
-        >
-          {loading
-            ? "جاري المعالجة..."
-            : step === 4
-              ? "إضافة العضو الفرعي"
-              : "التالي"}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -85,14 +85,14 @@ export default function ExpiringSubscriptions() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-right mb-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <h1 className="text-xl sm:text-3xl font-bold text-right mb-6">
         الاشتراكات المنتهية
       </h1>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Days Filter */}
           <div className="text-right">
             <label className="block text-sm font-semibold text-gray-700 mb-2">

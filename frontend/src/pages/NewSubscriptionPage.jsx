@@ -137,10 +137,10 @@ export default function NewSubscriptionPage() {
   if (success) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center p-6"
+        className="min-h-screen flex items-center justify-center p-4 sm:p-6"
         dir="rtl"
       >
-        <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-10 text-center border border-gray-100">
+        <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-6 sm:p-10 text-center border border-gray-100">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg
               className="w-10 h-10 text-green-500"
@@ -156,7 +156,7 @@ export default function NewSubscriptionPage() {
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
             تم إنشاء الاشتراك بنجاح!
           </h2>
           <p className="text-gray-500 mb-8">
@@ -179,7 +179,7 @@ export default function NewSubscriptionPage() {
 
           <button
             onClick={() => navigate("/subscriptions/search")}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition min-h-[44px] flex items-center justify-center"
           >
             عرض الاشتراك
           </button>
@@ -192,25 +192,32 @@ export default function NewSubscriptionPage() {
   const currentStepIndex = step === 2.5 ? 2 : Math.min(Math.ceil(step), 5);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8" dir="rtl">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8" dir="rtl">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">اشتراك جديد</h1>
-          <p className="text-gray-500 mt-1">أنشئ اشتراكاً جديداً خطوة بخطوة</p>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+            اشتراك جديد
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm sm:text-base">
+            أنشئ اشتراكاً جديداً خطوة بخطوة
+          </p>
         </div>
 
         {/* Stepper */}
-        <div className="flex items-center gap-0 mb-8">
+        <div className="flex items-center gap-0 mb-8 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0">
           {stepLabels.map((label, i) => {
             const n = i + 1;
             const active = n === currentStepIndex;
             const done = n < currentStepIndex;
             return (
-              <div key={n} className="flex items-center flex-1 last:flex-none">
+              <div
+                key={n}
+                className="flex items-center flex-1 last:flex-none min-w-fit"
+              >
                 <div className="flex flex-col items-center">
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all
                       ${done ? "bg-blue-600 text-white" : active ? "bg-blue-600 text-white ring-4 ring-blue-100" : "bg-white border-2 border-gray-200 text-gray-400"}`}
                   >
                     {done ? (
@@ -232,7 +239,7 @@ export default function NewSubscriptionPage() {
                     )}
                   </div>
                   <span
-                    className={`text-xs mt-1 font-medium ${active ? "text-blue-600" : done ? "text-gray-500" : "text-gray-300"}`}
+                    className={`text-xs mt-1 font-medium whitespace-nowrap ${active ? "text-blue-600" : done ? "text-gray-500" : "text-gray-300"}`}
                   >
                     {label}
                   </span>
@@ -255,14 +262,14 @@ export default function NewSubscriptionPage() {
         )}
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 lg:p-8">
           {/* ── Step 1 ── */}
           {step === 1 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6">
                 اختر نوع الحساب
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {accountTypes.map((type) => (
                   <button
                     key={type.id}
@@ -274,7 +281,7 @@ export default function NewSubscriptionPage() {
                         setStep(2);
                       }
                     }}
-                    className={`p-5 border-2 rounded-2xl text-center transition-all hover:border-blue-400 hover:bg-blue-50 group
+                    className={`p-5 border-2 rounded-2xl text-center transition-all hover:border-blue-400 hover:bg-blue-50 group min-h-[120px] flex flex-col items-center justify-center
                       ${selectedType === type.id ? "border-blue-600 bg-blue-50" : "border-gray-200"}`}
                   >
                     <div className="text-3xl mb-2">{type.icon}</div>
@@ -291,7 +298,7 @@ export default function NewSubscriptionPage() {
           {/* ── Step 2 ── */}
           {step === 2 && (
             <form onSubmit={handleSubmit(handleMemberSubmit)}>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6">
                 {selectedType === "individual" && "معلومات العضو"}
                 {selectedType === "friends" && "معلومات الشخص الأول"}
                 {selectedType === "family" && "معلومات العضو الأساسي"}
@@ -342,17 +349,17 @@ export default function NewSubscriptionPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-8">
+              <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition min-h-[44px] flex items-center justify-center"
                 >
                   السابق
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition min-h-[44px] flex items-center justify-center"
                 >
                   التالي
                 </button>
@@ -363,7 +370,7 @@ export default function NewSubscriptionPage() {
           {/* ── Step 2.5 ── */}
           {step === 2.5 && (
             <form onSubmit={handleSubmit(handlePartnerSubmit)}>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
                 {selectedType === "friends"
                   ? "معلومات الشخص الثاني"
                   : "معلومات الشريك"}
@@ -408,20 +415,20 @@ export default function NewSubscriptionPage() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-3 mt-8">
+              <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
                   type="button"
                   onClick={() => {
                     window.partnerData = null;
                     setStep(3);
                   }}
-                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition min-h-[44px] flex items-center justify-center"
                 >
                   {selectedType === "family" ? "بدون شريك" : "السابق"}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition min-h-[44px] flex items-center justify-center"
                 >
                   التالي
                 </button>
@@ -432,7 +439,7 @@ export default function NewSubscriptionPage() {
           {/* ── Step 3 ── */}
           {step === 3 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6">
                 اختر الحزمة المناسبة
               </h2>
               {filteredPackages.length === 0 ? (
@@ -475,7 +482,7 @@ export default function NewSubscriptionPage() {
               <div className="flex gap-3 mt-8">
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition min-h-[44px] flex items-center justify-center"
                 >
                   السابق
                 </button>
@@ -486,7 +493,7 @@ export default function NewSubscriptionPage() {
           {/* ── Step 4 ── */}
           {step === 4 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6">
                 التاريخ وطريقة الدفع
               </h2>
 
@@ -537,7 +544,7 @@ export default function NewSubscriptionPage() {
 
                 <div>
                   <label className={labelClass}>طريقة الدفع</label>
-                  <div className="grid grid-cols-3 gap-2 mt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
                     {[
                       { value: "cash", label: "نقدي", icon: "💵" },
                       { value: "network", label: "تحويل بنكي", icon: "🏦" },
@@ -546,7 +553,7 @@ export default function NewSubscriptionPage() {
                       <button
                         key={m.value}
                         onClick={() => setPaymentMethod(m.value)}
-                        className={`py-3 rounded-xl border-2 text-center text-sm font-semibold transition-all
+                        className={`py-3 rounded-xl border-2 text-center text-sm font-semibold transition-all min-h-[44px] flex flex-col items-center justify-center
                           ${
                             paymentMethod === m.value
                               ? "border-blue-600 bg-blue-50 text-blue-700"
@@ -561,16 +568,16 @@ export default function NewSubscriptionPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-8">
+              <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
                   onClick={() => setStep(3)}
-                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition min-h-[44px] flex items-center justify-center"
                 >
                   السابق
                 </button>
                 <button
                   onClick={() => setStep(5)}
-                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition min-h-[44px] flex items-center justify-center"
                 >
                   مراجعة البيانات
                 </button>
@@ -581,7 +588,7 @@ export default function NewSubscriptionPage() {
           {/* ── Step 5 ── */}
           {step === 5 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6">
                 مراجعة البيانات
               </h2>
 
@@ -646,17 +653,17 @@ export default function NewSubscriptionPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setStep(4)}
-                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition min-h-[44px] flex items-center justify-center"
                 >
                   السابق
                 </button>
                 <button
                   onClick={handleFinalSubmit}
                   disabled={loading}
-                  className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">

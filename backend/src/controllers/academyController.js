@@ -10,6 +10,9 @@ const {
 // POST /api/academy/subscriptions - create new academy subscription
 const createSubscriptionCtrl = async (req, res) => {
   try {
+    console.log("=== CONTROLLER RECEIVED ===");
+    console.log("memberType:", req.body.memberType);
+    console.log("parentSubscriptionId:", req.body.parentSubscriptionId);
     console.log("BODY:", JSON.stringify(req.body, null, 2));
     console.log("USER:", req.user);
 
@@ -70,13 +73,11 @@ const createSubscriptionCtrl = async (req, res) => {
       userId: req.user._id,
     });
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "تم إنشاء الاشتراك بنجاح",
-        data: result,
-      });
+    res.status(201).json({
+      success: true,
+      message: "تم إنشاء الاشتراك بنجاح",
+      data: result,
+    });
   } catch (error) {
     console.error("ACADEMY SUB ERROR:", error.message);
     res.status(400).json({ success: false, message: error.message });
@@ -404,6 +405,14 @@ const activeTodayCtrl = async (req, res, next) => {
       .populate("groupId", "name schedule")
       .sort({ "groupId.name": 1, "memberId.fullName": 1 });
 
+    // Prevent browser caching
+    res.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+
     res.json(subscriptions);
   } catch (error) {
     next(error);
@@ -557,6 +566,31 @@ const dashboardCtrl = async (req, res, next) => {
   }
 };
 
+// PUT /api/academy/groups/:id - update group
+const updateGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, schedule, maxCapacity, isActive } = req.body;
+    const AcademyGroup = require("../models/AcademyGroup");
+
+    const group = await AcademyGroup.findByIdAndUpdate(
+      id,
+      { $set: { name, schedule, maxCapacity, isActive } },
+      { new: true, runValidators: true },
+    ).populate("sportId", "name nameEn gender");
+
+    if (!group) {
+      return res
+        .status(404)
+        .json({ success: false, message: "المجموعة غير موجودة" });
+    }
+
+    res.json({ success: true, message: "تم تحديث المجموعة", data: group });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscriptionCtrl,
   listSubscriptionsCtrl,
@@ -567,4 +601,5 @@ module.exports = {
   expiringSubscriptionsCtrl,
   activeTodayCtrl,
   dashboardCtrl,
+  updateGroup,
 };

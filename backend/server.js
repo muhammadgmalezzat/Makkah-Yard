@@ -10,6 +10,8 @@ const authRoutes = require("./src/routes/auth");
 const packageRoutes = require("./src/routes/packages");
 const subscriptionRoutes = require("./src/routes/subscriptions");
 const academyRoutes = require("./src/routes/academyRoutes");
+const messagingRoutes = require("./src/routes/messagingRoutes");
+const memberRoutes = require("./src/routes/memberRoutes");
 
 // Middleware
 const errorHandler = require("./src/middleware/errorHandler");
@@ -36,6 +38,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/packages", packageRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/academy", academyRoutes);
+app.use("/api/messaging", messagingRoutes);
+app.use("/api/members", memberRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -47,6 +51,9 @@ app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+// });
+app.listen(5000, "0.0.0.0", () => {
+  console.log("Server running on port 5000");
 });
