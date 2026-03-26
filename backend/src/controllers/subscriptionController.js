@@ -458,8 +458,7 @@ const getMembersDirectory = async (req, res, next) => {
       endDate, // filter by subscription end date
       activeOnly, // true/false
       gender, // male, female, all
-      page = 1,
-      limit = 50,
+      limit = 500, // high default to get all results, frontend handles pagination
     } = req.query;
 
     console.log("packageType filter:", packageType);
@@ -472,7 +471,7 @@ const getMembersDirectory = async (req, res, next) => {
     const filteredAccounts = await Account.find(accountFilter).distinct("_id");
     console.log("filteredAccounts count:", filteredAccounts.length);
 
-    // Step 2: Find primary members in those accounts
+    // Step 2: Find ALL primary members matching filters (for counting)
     let memberFilter = {
       role: "primary",
       isActive: true,
@@ -487,15 +486,24 @@ const getMembersDirectory = async (req, res, next) => {
       ];
     }
 
+    // Get total count of primary members BEFORE pagination
+    const totalPrimaryMembers = await Member.countDocuments(memberFilter);
+
+    // Now fetch with limit for display
     const primaryMembers = await Member.find(memberFilter)
       .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
       .lean();
 
-    console.log("primaryMembers found:", primaryMembers.length);
+    console.log(
+      "primaryMembers found:",
+      primaryMembers.length,
+      "total:",
+      totalPrimaryMembers,
+    );
 
     // Step 3: Academy children (only when packageType is all or academy_only)
     let academyMembers = [];
+    let totalAcademyMembers = 0;
     if (
       !packageType ||
       packageType === "all" ||
@@ -516,28 +524,64 @@ const getMembersDirectory = async (req, res, next) => {
           { phone: { $regex: q.trim(), $options: "i" } },
         ];
       }
-      academyMembers = await Member.find(childFilter).lean();
+      totalAcademyMembers = await Member.countDocuments(childFilter);
+      academyMembers = await Member.find(childFilter)
+        .limit(parseInt(limit))
+        .lean();
     }
 
-    // Step 4: Combine and enrich
+    const totalCount = totalPrimaryMembers + totalAcademyMembers;
+
+    // Step 4: Combine all members
     const allMembers = [...primaryMembers, ...academyMembers];
 
-    const results = await Promise.all(
-      allMembers.map(async (member) => {
-        const account = await Account.findById(member.accountId).lean();
+    // Step 5: Bulk fetch all accounts at once (eliminate N+1 query)
+    const allAccountIds = allMembers.map((m) => m.accountId.toString());
+    const allAccounts = await Account.find({
+      _id: { $in: allAccountIds },
+    }).lean();
+    const accountMap = {};
+    allAccounts.forEach((acc) => {
+      accountMap[acc._id.toString()] = acc;
+    });
 
-        const gymSub = await Subscription.findOne({ memberId: member._id })
-          .sort({ createdAt: -1 })
-          .populate("packageId", "name category durationMonths")
-          .lean();
+    // Step 6: Bulk fetch all gym subscriptions at once (eliminate N+1 query)
+    const allMemberIds = allMembers.map((m) => m._id);
+    const allGymSubs = await Subscription.find({
+      memberId: { $in: allMemberIds },
+    })
+      .sort({ createdAt: -1 })
+      .populate("packageId", "name category durationMonths")
+      .lean();
 
-        const academySubs = await AcademySubscription.find({
-          memberId: member._id,
-        })
-          .populate("sportId", "name")
-          .populate("groupId", "name")
-          .sort({ createdAt: -1 })
-          .lean();
+    const gymSubMap = {};
+    allGymSubs.forEach((sub) => {
+      const key = sub.memberId.toString();
+      if (!gymSubMap[key]) gymSubMap[key] = sub;
+    });
+
+    // Step 7: Bulk fetch all academy subscriptions at once (eliminate N+1 query)
+    const allAcademySubs = await AcademySubscription.find({
+      memberId: { $in: allMemberIds },
+    })
+      .populate("sportId", "name")
+      .populate("groupId", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const academySubMap = {};
+    allAcademySubs.forEach((sub) => {
+      const key = sub.memberId.toString();
+      if (!academySubMap[key]) academySubMap[key] = [];
+      academySubMap[key].push(sub);
+    });
+
+    // Step 8: Map through members using the maps (O(1) lookup instead of N queries)
+    const results = allMembers
+      .map((member) => {
+        const account = accountMap[member.accountId.toString()];
+        const gymSub = gymSubMap[member._id.toString()] || null;
+        const academySubs = academySubMap[member._id.toString()] || [];
 
         // Apply activeOnly filter
         if (activeOnly === "true") {
@@ -556,29 +600,23 @@ const getMembersDirectory = async (req, res, next) => {
           if (new Date(gymSub.endDate) > new Date(endDate)) return null;
         }
 
-        // Count all members in this account
-        const accountMemberCount = await Member.countDocuments({
-          accountId: member.accountId,
-          isActive: true,
-        });
-
         return {
           member,
-          account,
-          gymSubscription: gymSub || null,
-          academySubscriptions: academySubs || [],
-          accountMemberCount,
+          account: account || null,
+          gymSubscription: gymSub,
+          academySubscriptions: academySubs,
           accountId: member.accountId,
         };
-      }),
-    );
+      })
+      .filter(Boolean);
 
-    const filtered = results.filter(Boolean);
+    console.log("Final results count:", results.length, "total:", totalCount);
 
     res.json({
       success: true,
-      count: filtered.length,
-      data: filtered,
+      count: results.length,
+      total: totalCount,
+      data: results,
     });
   } catch (error) {
     next(error);
