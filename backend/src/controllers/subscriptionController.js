@@ -489,10 +489,8 @@ const getMembersDirectory = async (req, res, next) => {
     // Get total count of primary members BEFORE pagination
     const totalPrimaryMembers = await Member.countDocuments(memberFilter);
 
-    // Now fetch with limit for display
-    const primaryMembers = await Member.find(memberFilter)
-      .limit(parseInt(limit))
-      .lean();
+    // Fetch ALL primary members (no pagination limit yet - will paginate after filtering)
+    const primaryMembers = await Member.find(memberFilter).lean();
 
     console.log(
       "primaryMembers found:",
@@ -525,9 +523,8 @@ const getMembersDirectory = async (req, res, next) => {
         ];
       }
       totalAcademyMembers = await Member.countDocuments(childFilter);
-      academyMembers = await Member.find(childFilter)
-        .limit(parseInt(limit))
-        .lean();
+      // Fetch ALL academy members (no pagination limit yet - will paginate after filtering)
+      academyMembers = await Member.find(childFilter).lean();
     }
 
     const totalCount = totalPrimaryMembers + totalAcademyMembers;
@@ -576,47 +573,54 @@ const getMembersDirectory = async (req, res, next) => {
       academySubMap[key].push(sub);
     });
 
-    // Step 8: Map through members using the maps (O(1) lookup instead of N queries)
-    const results = allMembers
-      .map((member) => {
-        const account = accountMap[member.accountId.toString()];
-        const gymSub = gymSubMap[member._id.toString()] || null;
-        const academySubs = academySubMap[member._id.toString()] || [];
+    // Step 8: Filter members and build results array
+    const filteredResults = [];
+    for (const member of allMembers) {
+      const account = accountMap[member.accountId.toString()];
+      const gymSub = gymSubMap[member._id.toString()] || null;
+      const academySubs = academySubMap[member._id.toString()] || [];
 
-        // Apply activeOnly filter
-        if (activeOnly === "true") {
-          const hasActiveGym = gymSub?.status === "active";
-          const hasActiveAcademy = academySubs.some(
-            (s) => s.status === "active",
-          );
-          if (!hasActiveGym && !hasActiveAcademy) return null;
-        }
+      // Apply activeOnly filter
+      if (activeOnly === "true") {
+        const hasActiveGym = gymSub?.status === "active";
+        const hasActiveAcademy = academySubs.some((s) => s.status === "active");
+        if (!hasActiveGym && !hasActiveAcademy) continue;
+      }
 
-        // Apply date range filter on gym subscription
-        if (gymSub && startDate) {
-          if (new Date(gymSub.startDate) < new Date(startDate)) return null;
-        }
-        if (gymSub && endDate) {
-          if (new Date(gymSub.endDate) > new Date(endDate)) return null;
-        }
+      // Apply date range filter on gym subscription
+      if (gymSub && startDate) {
+        if (new Date(gymSub.startDate) < new Date(startDate)) continue;
+      }
+      if (gymSub && endDate) {
+        if (new Date(gymSub.endDate) > new Date(endDate)) continue;
+      }
 
-        return {
-          member,
-          account: account || null,
-          gymSubscription: gymSub,
-          academySubscriptions: academySubs,
-          accountId: member.accountId,
-        };
-      })
-      .filter(Boolean);
+      filteredResults.push({
+        member,
+        account: account || null,
+        gymSubscription: gymSub,
+        academySubscriptions: academySubs,
+        accountId: member.accountId,
+      });
+    }
 
-    console.log("Final results count:", results.length, "total:", totalCount);
+    // Step 9: Calculate total AFTER all filters applied
+    const total = filteredResults.length;
+
+    // Step 10: Apply pagination
+    const page = parseInt(req.query.page) || 1;
+    const pageLimit = parseInt(req.query.limit) || 50;
+    const totalPages = Math.ceil(total / pageLimit);
+    const startIndex = (page - 1) * pageLimit;
+    const pageData = filteredResults.slice(startIndex, startIndex + pageLimit);
 
     res.json({
       success: true,
-      count: results.length,
-      total: totalCount,
-      data: results,
+      count: pageData.length,
+      total: total,
+      totalPages: totalPages,
+      currentPage: page,
+      data: pageData,
     });
   } catch (error) {
     next(error);
