@@ -1,0 +1,32 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Sensitive data files
+backend/src/data/*.xlsx
+backend/src/data/*.csv
+
+# Node modules
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+backend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp directories
+tmpclaude-*/
