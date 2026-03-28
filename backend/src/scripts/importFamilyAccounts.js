@@ -47,6 +47,7 @@ const SPORT_MAP = {
   جودو: "judo",
   mma: "mma",
   MMA: "mma",
+  "ام ام ايه": "mma",
   ملاكمة: "boxing",
   ملاكمه: "boxing",
   "كيك بوكس": "kickboxing",
@@ -56,6 +57,7 @@ const SPORT_MAP = {
   مصارعه: "wrestling",
   "كرة قدم": "football1",
   "كره قدم": "football1",
+  باليه: "ballet",
 };
 
 // Roles that are adults (gym subscription)
@@ -311,14 +313,30 @@ async function run() {
       });
 
       // ── Primary member ───────────────────────────
-      createdPrimaryMember = await Member.create({
-        accountId: createdAccount._id,
-        role: "primary",
-        fullName: primaryName,
-        phone: sanitizePhone(primaryRow["phone"]),
-        email: sanitize(primaryRow["email"]),
-        gender: "male",
-      });
+      let primaryPhone = sanitizePhone(primaryRow["phone"]);
+      try {
+        createdPrimaryMember = await Member.create({
+          accountId: createdAccount._id,
+          role: "primary",
+          fullName: primaryName,
+          phone: primaryPhone,
+          email: sanitize(primaryRow["email"]),
+          gender: "male",
+        });
+      } catch (phoneErr) {
+        if (phoneErr.code === 11000 && phoneErr.keyPattern?.phone) {
+          console.log(`   ⚠️  رقم هاتف مكرر: ${primaryPhone} — سيتم تخطيه`);
+          createdPrimaryMember = await Member.create({
+            accountId: createdAccount._id,
+            role: "primary",
+            fullName: primaryName,
+            email: sanitize(primaryRow["email"]),
+            gender: "male",
+          });
+        } else {
+          throw phoneErr;
+        }
+      }
 
       createdPrimarySub = await Subscription.create({
         memberId: createdPrimaryMember._id,
@@ -344,6 +362,8 @@ async function run() {
       });
 
       // ── Partner & sub_adult members ──────────────
+      let partnerAssigned = false; // track if partner slot is taken
+
       for (const ar of adultRows) {
         if (ar === primaryRow) continue;
         const memberName = sanitize(ar["fullName"]);
@@ -356,9 +376,17 @@ async function run() {
           continue;
         }
 
-        const isPartner =
+        // First additional adult = partner (included in primary)
+        // All others = sub_adult (pay extra)
+        const isPartnerRole =
           roleKey.startsWith("إضافي") || roleKey.startsWith("اضافي");
-        const memberRole = isPartner ? "partner" : "sub_adult";
+        let memberRole;
+        if (isPartnerRole && !partnerAssigned) {
+          memberRole = "partner";
+          partnerAssigned = true;
+        } else {
+          memberRole = "sub_adult";
+        }
 
         const memberPkg = await Package.findOne({
           category: rolePkgMap.category,
@@ -370,16 +398,39 @@ async function run() {
         const mEndDate = excelDateToJS(ar["endDate"]) || endDate;
         const mStatus = mEndDate < today ? "expired" : "active";
 
-        const newMember = await Member.create({
-          accountId: createdAccount._id,
-          role: memberRole,
-          fullName: memberName,
-          phone: sanitizePhone(ar["phone"]),
-          email: sanitize(ar["email"]),
-          gender: "male",
-        });
+        let memberPhone =
+          sanitizePhone(ar["phone"]) !== sanitizePhone(primaryRow["phone"])
+            ? sanitizePhone(ar["phone"])
+            : undefined;
 
-        if (memberPkg) {
+        let newMember;
+        try {
+          newMember = await Member.create({
+            accountId: createdAccount._id,
+            role: memberRole,
+            fullName: memberName,
+            phone: memberPhone,
+            email: sanitize(ar["email"]),
+            gender: "male",
+          });
+        } catch (phoneErr) {
+          if (phoneErr.code === 11000 && phoneErr.keyPattern?.phone) {
+            console.log(`   ⚠️  رقم هاتف مكرر: ${memberPhone} — سيتم تخطيه`);
+            newMember = await Member.create({
+              accountId: createdAccount._id,
+              role: memberRole,
+              fullName: memberName,
+              email: sanitize(ar["email"]),
+              gender: "male",
+            });
+          } else {
+            throw phoneErr;
+          }
+        }
+
+        // Partner = no subscription, no payment (included in primary)
+        // Sub_adult = has own subscription and payment
+        if (memberRole === "sub_adult" && memberPkg) {
           const newSub = await Subscription.create({
             memberId: newMember._id,
             accountId: createdAccount._id,
@@ -401,6 +452,11 @@ async function run() {
             paidAt: mStartDate,
             createdBy: adminUserId,
           });
+          console.log(
+            `   👤 ${memberName} — فرعي بالغ | ${memberPkg.name} | ${memberPkg.price} ريال`,
+          );
+        } else if (memberRole === "partner") {
+          console.log(`   👥 ${memberName} — شريك (مشمول في الأساسي)`);
         }
       }
 

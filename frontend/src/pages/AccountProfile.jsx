@@ -376,6 +376,15 @@ export default function AccountProfile() {
                     )}
                   </div>
 
+                  {/* Partner Status Message */}
+                  {m.role === "partner" && !gymSub && (
+                    <div className="mb-4 pb-4 border-b border-gray-100">
+                      <div className="bg-blue-50 rounded-xl px-4 py-3 text-sm text-blue-700 font-medium">
+                        ✅ مشمول في اشتراك العضو الأساسي
+                      </div>
+                    </div>
+                  )}
+
                   {/* Gym Subscription */}
                   {gymSub && (
                     <div className="mb-4 pb-4 border-b border-gray-100">

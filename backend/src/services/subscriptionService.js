@@ -715,7 +715,7 @@ const addSubMemberToFamily = async ({
       phone: sanitize(memberData.phone),
       email: sanitize(memberData.email),
       nationalId: sanitize(memberData.nationalId),
-      role: pkg.category === "sub_child" ? "child" : "partner",
+      role: pkg.category === "sub_child" ? "child" : "sub_adult",
       guardianAccountId: accountId,
     });
     await member.save();

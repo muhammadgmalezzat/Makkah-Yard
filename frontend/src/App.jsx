@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
+import ClubDashboard from "./pages/ClubDashboard";
 import PackagesPage from "./pages/PackagesPage";
 import NewSubscriptionPage from "./pages/NewSubscriptionPage";
 import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
@@ -36,6 +37,7 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/club-dashboard" element={<ClubDashboard />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route
               path="/subscriptions/new"

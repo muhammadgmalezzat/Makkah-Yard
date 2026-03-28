@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 
 const navItems = [
   { to: "/dashboard", label: "لوحة التحكم", icon: "⊞" },
+  { to: "/club-dashboard", label: "لوحة تحكم النادي", icon: "📈" },
   { to: "/subscriptions/new", label: "اشتراك جديد", icon: "＋" },
   {
     to: "/subscriptions/add-sub-member",

@@ -343,10 +343,6 @@ const getAccountProfile = async (req, res, next) => {
   try {
     const { accountId } = req.params;
 
-    console.log("=== getAccountProfile ===");
-    console.log("accountId param:", req.params.accountId);
-    console.log("accountId type:", typeof req.params.accountId);
-
     // Get account
     const account = await Account.findById(accountId);
     if (!account) {
@@ -357,15 +353,6 @@ const getAccountProfile = async (req, res, next) => {
 
     // Get ALL members in this account
     const members = await Member.find({ accountId }).sort({ role: 1 });
-    console.log("Members found:", members.length);
-    console.log(
-      "Members:",
-      members.map((m) => ({
-        name: m.fullName,
-        role: m.role,
-        accountId: m.accountId.toString(),
-      })),
-    );
 
     // Get subscriptions for each member
     const membersWithSubs = await Promise.all(
@@ -381,8 +368,6 @@ const getAccountProfile = async (req, res, next) => {
           .populate("groupId", "name schedule")
           .sort({ createdAt: -1 });
 
-        console.log(`Academy subs for ${member.fullName}:`, academySubs.length);
-
         return {
           member,
           gymSubscription: gymSub || null,
@@ -391,13 +376,25 @@ const getAccountProfile = async (req, res, next) => {
       }),
     );
 
-    // Get total payments for this account
-    const allMemberIds = members.map((m) => m._id);
-    const payments = await Payment.find({ memberId: { $in: allMemberIds } })
+    // Get total payments for this account (excluding partner members)
+    const memberIds = members.map((m) => m._id);
+    const payments = await Payment.find({ memberId: { $in: memberIds } })
       .sort({ createdAt: -1 })
       .populate("createdBy", "name");
 
-    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const partnerIds = members
+      .filter((m) => m.role === "partner")
+      .map((m) => m._id.toString());
+
+    // Exclude partner payments from total
+    const relevantPayments = payments.filter(
+      (p) => !partnerIds.includes(p.memberId.toString()),
+    );
+
+    const totalPaid = relevantPayments.reduce(
+      (sum, p) => sum + (p.amount || 0),
+      0,
+    );
 
     // Get primary member's active subscription
     const primaryMember = members.find((m) => m.role === "primary");
@@ -414,14 +411,14 @@ const getAccountProfile = async (req, res, next) => {
         account,
         primarySubscription: primarySub,
         members: membersWithSubs,
-        payments,
+        payments: relevantPayments,
         totalPaid,
         stats: {
           totalMembers: members.length,
           activeMembers: members.filter((m) => m.isActive).length,
-          totalPayments: payments.length,
+          totalPayments: relevantPayments.length,
           totalPaid,
-          lastPaymentDate: payments[0]?.paidAt || null,
+          lastPaymentDate: relevantPayments[0]?.paidAt || null,
         },
       },
     });
@@ -489,10 +486,8 @@ const getMembersDirectory = async (req, res, next) => {
     // Get total count of primary members BEFORE pagination
     const totalPrimaryMembers = await Member.countDocuments(memberFilter);
 
-    // Now fetch with limit for display
-    const primaryMembers = await Member.find(memberFilter)
-      .limit(parseInt(limit))
-      .lean();
+    // Fetch ALL primary members (no pagination limit yet - will paginate after filtering)
+    const primaryMembers = await Member.find(memberFilter).lean();
 
     console.log(
       "primaryMembers found:",
@@ -525,9 +520,8 @@ const getMembersDirectory = async (req, res, next) => {
         ];
       }
       totalAcademyMembers = await Member.countDocuments(childFilter);
-      academyMembers = await Member.find(childFilter)
-        .limit(parseInt(limit))
-        .lean();
+      // Fetch ALL academy members (no pagination limit yet - will paginate after filtering)
+      academyMembers = await Member.find(childFilter).lean();
     }
 
     const totalCount = totalPrimaryMembers + totalAcademyMembers;
@@ -576,47 +570,54 @@ const getMembersDirectory = async (req, res, next) => {
       academySubMap[key].push(sub);
     });
 
-    // Step 8: Map through members using the maps (O(1) lookup instead of N queries)
-    const results = allMembers
-      .map((member) => {
-        const account = accountMap[member.accountId.toString()];
-        const gymSub = gymSubMap[member._id.toString()] || null;
-        const academySubs = academySubMap[member._id.toString()] || [];
+    // Step 8: Filter members and build results array
+    const filteredResults = [];
+    for (const member of allMembers) {
+      const account = accountMap[member.accountId.toString()];
+      const gymSub = gymSubMap[member._id.toString()] || null;
+      const academySubs = academySubMap[member._id.toString()] || [];
 
-        // Apply activeOnly filter
-        if (activeOnly === "true") {
-          const hasActiveGym = gymSub?.status === "active";
-          const hasActiveAcademy = academySubs.some(
-            (s) => s.status === "active",
-          );
-          if (!hasActiveGym && !hasActiveAcademy) return null;
-        }
+      // Apply activeOnly filter
+      if (activeOnly === "true") {
+        const hasActiveGym = gymSub?.status === "active";
+        const hasActiveAcademy = academySubs.some((s) => s.status === "active");
+        if (!hasActiveGym && !hasActiveAcademy) continue;
+      }
 
-        // Apply date range filter on gym subscription
-        if (gymSub && startDate) {
-          if (new Date(gymSub.startDate) < new Date(startDate)) return null;
-        }
-        if (gymSub && endDate) {
-          if (new Date(gymSub.endDate) > new Date(endDate)) return null;
-        }
+      // Apply date range filter on gym subscription
+      if (gymSub && startDate) {
+        if (new Date(gymSub.startDate) < new Date(startDate)) continue;
+      }
+      if (gymSub && endDate) {
+        if (new Date(gymSub.endDate) > new Date(endDate)) continue;
+      }
 
-        return {
-          member,
-          account: account || null,
-          gymSubscription: gymSub,
-          academySubscriptions: academySubs,
-          accountId: member.accountId,
-        };
-      })
-      .filter(Boolean);
+      filteredResults.push({
+        member,
+        account: account || null,
+        gymSubscription: gymSub,
+        academySubscriptions: academySubs,
+        accountId: member.accountId,
+      });
+    }
 
-    console.log("Final results count:", results.length, "total:", totalCount);
+    // Step 9: Calculate total AFTER all filters applied
+    const total = filteredResults.length;
+
+    // Step 10: Apply pagination
+    const page = parseInt(req.query.page) || 1;
+    const pageLimit = parseInt(req.query.limit) || 50;
+    const totalPages = Math.ceil(total / pageLimit);
+    const startIndex = (page - 1) * pageLimit;
+    const pageData = filteredResults.slice(startIndex, startIndex + pageLimit);
 
     res.json({
       success: true,
-      count: results.length,
-      total: totalCount,
-      data: results,
+      count: pageData.length,
+      total: total,
+      totalPages: totalPages,
+      currentPage: page,
+      data: pageData,
     });
   } catch (error) {
     next(error);
@@ -686,6 +687,238 @@ const deleteAccount = async (req, res, next) => {
   }
 };
 
+const getClubDashboard = async (req, res, next) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const weekFromNow = new Date(today);
+    weekFromNow.setDate(today.getDate() + 7);
+
+    // ── Active Subscriptions by Package Type ──
+    const activeGymSubs = await Subscription.find({ status: "active" })
+      .populate("packageId", "name category durationMonths")
+      .populate("memberId", "fullName role")
+      .lean();
+
+    // Count by package category
+    const byCategory = {
+      individual: 0,
+      friends: 0,
+      family_essential: 0,
+      sub_adult: 0,
+      academy_only: 0,
+    };
+    activeGymSubs.forEach((sub) => {
+      const cat = sub.packageId?.category;
+      if (cat && byCategory[cat] !== undefined) byCategory[cat]++;
+    });
+
+    // Count by duration
+    const byDuration = { 1: 0, 3: 0, 6: 0, 12: 0, 24: 0 };
+    activeGymSubs.forEach((sub) => {
+      const d = sub.packageId?.durationMonths;
+      if (d && byDuration[d] !== undefined) byDuration[d]++;
+    });
+
+    // ── Total Active Members ──
+    const totalActiveMembers = await Member.countDocuments({ isActive: true });
+    const activeMaleMembers = await Member.countDocuments({
+      isActive: true,
+      gender: "male",
+    });
+    const activeFemaleMembers = await Member.countDocuments({
+      isActive: true,
+      gender: "female",
+    });
+
+    // ── Active Accounts by Type ──
+    const activeAccounts = await Account.countDocuments({ status: "active" });
+    const individualAccounts = await Account.countDocuments({
+      type: "individual",
+      status: "active",
+    });
+    const friendsAccounts = await Account.countDocuments({
+      type: "friends",
+      status: "active",
+    });
+    const familyAccounts = await Account.countDocuments({
+      type: "family",
+      status: "active",
+    });
+    const academyAccounts = await Account.countDocuments({
+      type: "academy_only",
+      status: "active",
+    });
+
+    // ── Revenue This Month ──
+    const thisMonthPayments = await Payment.find({
+      paidAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+    }).lean();
+    const thisMonthRevenue = thisMonthPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0,
+    );
+
+    // ── Expiring Soon ──
+    const expiringThisWeek = await Subscription.countDocuments({
+      status: "active",
+      endDate: { $gte: today, $lte: weekFromNow },
+    });
+    const expiringThisMonth = await Subscription.countDocuments({
+      status: "active",
+      endDate: { $gte: today, $lte: thisMonthEnd },
+    });
+
+    // Expiring subscriptions details
+    const expiringSubs = await Subscription.find({
+      status: "active",
+      endDate: { $gte: today, $lte: weekFromNow },
+    })
+      .populate("memberId", "fullName phone")
+      .populate("packageId", "name category")
+      .sort({ endDate: 1 })
+      .limit(20)
+      .lean();
+
+    // ── New Subscriptions This Month ──
+    const newThisMonth = await Subscription.countDocuments({
+      createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+    });
+
+    // ── Expired Accounts ──
+    const expiredAccounts = await Account.countDocuments({ status: "expired" });
+
+    // ── Frozen Accounts ──
+    const frozenAccounts = await Account.countDocuments({ status: "frozen" });
+
+    // ── Academy Stats ──
+    const academyActiveSubs = await AcademySubscription.find({
+      status: "active",
+    })
+      .populate("sportId", "name nameEn")
+      .populate("groupId", "name maxCapacity currentCount")
+      .populate("memberId", "fullName gender")
+      .lean();
+
+    const activeAcademyChildren = new Set(
+      academyActiveSubs.map((s) => s.memberId?._id?.toString()),
+    ).size;
+
+    // Sport distribution
+    const sportDistribution = {};
+    academyActiveSubs.forEach((sub) => {
+      const sport = sub.sportId?.name || "أخرى";
+      sportDistribution[sport] = (sportDistribution[sport] || 0) + 1;
+    });
+
+    // Gender distribution academy
+    let academyBoys = 0,
+      academyGirls = 0;
+    academyActiveSubs.forEach((sub) => {
+      if (sub.memberId?.gender === "male") academyBoys++;
+      else academyGirls++;
+    });
+
+    // Groups fill rate
+    const allGroups = await AcademyGroup.find({ isActive: true })
+      .populate("sportId", "name")
+      .lean();
+
+    const groupStats = allGroups.map((g) => ({
+      name: g.name,
+      sport: g.sportId?.name || "غير محدد",
+      currentCount: g.currentCount,
+      maxCapacity: g.maxCapacity,
+      fillRate:
+        g.maxCapacity > 0
+          ? Math.round((g.currentCount / g.maxCapacity) * 100)
+          : 0,
+      isFull: g.currentCount >= g.maxCapacity,
+    }));
+
+    const fullGroups = groupStats.filter((g) => g.isFull).length;
+
+    // Academy revenue this month
+    const academyRevenueThisMonth = await Payment.aggregate([
+      { $match: { paidAt: { $gte: thisMonthStart, $lte: thisMonthEnd } } },
+      {
+        $lookup: {
+          from: "academysubscriptions",
+          localField: "subscriptionId",
+          foreignField: "_id",
+          as: "academySub",
+        },
+      },
+      { $match: { "academySub.0": { $exists: true } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const academyRevenue = academyRevenueThisMonth[0]?.total || 0;
+
+    // Expiring academy subs this week
+    const expiringAcademyThisWeek = await AcademySubscription.countDocuments({
+      status: "active",
+      endDate: { $gte: today, $lte: weekFromNow },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        // Overall
+        totalActiveMembers,
+        activeMaleMembers,
+        activeFemaleMembers,
+        activeAccounts,
+        expiredAccounts,
+        frozenAccounts,
+        newThisMonth,
+
+        // By account type
+        accountsByType: {
+          individual: individualAccounts,
+          friends: friendsAccounts,
+          family: familyAccounts,
+          academy: academyAccounts,
+        },
+
+        // Subscriptions by package type
+        gymSubsByCategory: byCategory,
+        gymSubsByDuration: byDuration,
+
+        // Revenue
+        thisMonthRevenue,
+        academyRevenue,
+        gymRevenue: thisMonthRevenue - academyRevenue,
+
+        // Expiring
+        expiringThisWeek,
+        expiringThisMonth,
+        expiringAcademyThisWeek,
+        expiringSubs: expiringSubs.map((s) => ({
+          memberName: s.memberId?.fullName,
+          phone: s.memberId?.phone,
+          packageName: s.packageId?.name,
+          endDate: s.endDate,
+          daysLeft: Math.ceil(
+            (new Date(s.endDate) - today) / (1000 * 60 * 60 * 24),
+          ),
+        })),
+
+        // Academy
+        activeAcademyChildren,
+        academyBoys,
+        academyGirls,
+        sportDistribution,
+        groupStats: groupStats.sort((a, b) => b.fillRate - a.fillRate),
+        fullGroups,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
@@ -697,4 +930,5 @@ module.exports = {
   updateSubscription,
   getMembersDirectory,
   deleteAccount,
+  getClubDashboard,
 };
