@@ -30,3 +30,48 @@ Thumbs.db
 
 # Temp directories
 tmpclaude-*/
+
+# Temp files
+tmp*
+tmpclaude*
+*.tmp
+*.temp
+.claude*
+
+# Temp files
+tmp*
+tmpclaude*
+*.tmp
+*.temp
+
+# Claude/AI temp
+.claude*
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Build
+dist/
+build/
+frontend/dist/
+
+# Data files (sensitive)
+backend/src/data/*.xlsx
+backend/src/data/*.csv
+
+# Scripts output
+*.bak
+tmpclaude*
+frontend/tmpclaude*
+backend/tmpclaude*
