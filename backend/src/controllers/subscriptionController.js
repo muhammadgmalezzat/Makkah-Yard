@@ -687,6 +687,238 @@ const deleteAccount = async (req, res, next) => {
   }
 };
 
+const getClubDashboard = async (req, res, next) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const weekFromNow = new Date(today);
+    weekFromNow.setDate(today.getDate() + 7);
+
+    // ── Active Subscriptions by Package Type ──
+    const activeGymSubs = await Subscription.find({ status: "active" })
+      .populate("packageId", "name category durationMonths")
+      .populate("memberId", "fullName role")
+      .lean();
+
+    // Count by package category
+    const byCategory = {
+      individual: 0,
+      friends: 0,
+      family_essential: 0,
+      sub_adult: 0,
+      academy_only: 0,
+    };
+    activeGymSubs.forEach((sub) => {
+      const cat = sub.packageId?.category;
+      if (cat && byCategory[cat] !== undefined) byCategory[cat]++;
+    });
+
+    // Count by duration
+    const byDuration = { 1: 0, 3: 0, 6: 0, 12: 0, 24: 0 };
+    activeGymSubs.forEach((sub) => {
+      const d = sub.packageId?.durationMonths;
+      if (d && byDuration[d] !== undefined) byDuration[d]++;
+    });
+
+    // ── Total Active Members ──
+    const totalActiveMembers = await Member.countDocuments({ isActive: true });
+    const activeMaleMembers = await Member.countDocuments({
+      isActive: true,
+      gender: "male",
+    });
+    const activeFemaleMembers = await Member.countDocuments({
+      isActive: true,
+      gender: "female",
+    });
+
+    // ── Active Accounts by Type ──
+    const activeAccounts = await Account.countDocuments({ status: "active" });
+    const individualAccounts = await Account.countDocuments({
+      type: "individual",
+      status: "active",
+    });
+    const friendsAccounts = await Account.countDocuments({
+      type: "friends",
+      status: "active",
+    });
+    const familyAccounts = await Account.countDocuments({
+      type: "family",
+      status: "active",
+    });
+    const academyAccounts = await Account.countDocuments({
+      type: "academy_only",
+      status: "active",
+    });
+
+    // ── Revenue This Month ──
+    const thisMonthPayments = await Payment.find({
+      paidAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+    }).lean();
+    const thisMonthRevenue = thisMonthPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0,
+    );
+
+    // ── Expiring Soon ──
+    const expiringThisWeek = await Subscription.countDocuments({
+      status: "active",
+      endDate: { $gte: today, $lte: weekFromNow },
+    });
+    const expiringThisMonth = await Subscription.countDocuments({
+      status: "active",
+      endDate: { $gte: today, $lte: thisMonthEnd },
+    });
+
+    // Expiring subscriptions details
+    const expiringSubs = await Subscription.find({
+      status: "active",
+      endDate: { $gte: today, $lte: weekFromNow },
+    })
+      .populate("memberId", "fullName phone")
+      .populate("packageId", "name category")
+      .sort({ endDate: 1 })
+      .limit(20)
+      .lean();
+
+    // ── New Subscriptions This Month ──
+    const newThisMonth = await Subscription.countDocuments({
+      createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd },
+    });
+
+    // ── Expired Accounts ──
+    const expiredAccounts = await Account.countDocuments({ status: "expired" });
+
+    // ── Frozen Accounts ──
+    const frozenAccounts = await Account.countDocuments({ status: "frozen" });
+
+    // ── Academy Stats ──
+    const academyActiveSubs = await AcademySubscription.find({
+      status: "active",
+    })
+      .populate("sportId", "name nameEn")
+      .populate("groupId", "name maxCapacity currentCount")
+      .populate("memberId", "fullName gender")
+      .lean();
+
+    const activeAcademyChildren = new Set(
+      academyActiveSubs.map((s) => s.memberId?._id?.toString()),
+    ).size;
+
+    // Sport distribution
+    const sportDistribution = {};
+    academyActiveSubs.forEach((sub) => {
+      const sport = sub.sportId?.name || "أخرى";
+      sportDistribution[sport] = (sportDistribution[sport] || 0) + 1;
+    });
+
+    // Gender distribution academy
+    let academyBoys = 0,
+      academyGirls = 0;
+    academyActiveSubs.forEach((sub) => {
+      if (sub.memberId?.gender === "male") academyBoys++;
+      else academyGirls++;
+    });
+
+    // Groups fill rate
+    const allGroups = await AcademyGroup.find({ isActive: true })
+      .populate("sportId", "name")
+      .lean();
+
+    const groupStats = allGroups.map((g) => ({
+      name: g.name,
+      sport: g.sportId?.name || "غير محدد",
+      currentCount: g.currentCount,
+      maxCapacity: g.maxCapacity,
+      fillRate:
+        g.maxCapacity > 0
+          ? Math.round((g.currentCount / g.maxCapacity) * 100)
+          : 0,
+      isFull: g.currentCount >= g.maxCapacity,
+    }));
+
+    const fullGroups = groupStats.filter((g) => g.isFull).length;
+
+    // Academy revenue this month
+    const academyRevenueThisMonth = await Payment.aggregate([
+      { $match: { paidAt: { $gte: thisMonthStart, $lte: thisMonthEnd } } },
+      {
+        $lookup: {
+          from: "academysubscriptions",
+          localField: "subscriptionId",
+          foreignField: "_id",
+          as: "academySub",
+        },
+      },
+      { $match: { "academySub.0": { $exists: true } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+    const academyRevenue = academyRevenueThisMonth[0]?.total || 0;
+
+    // Expiring academy subs this week
+    const expiringAcademyThisWeek = await AcademySubscription.countDocuments({
+      status: "active",
+      endDate: { $gte: today, $lte: weekFromNow },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        // Overall
+        totalActiveMembers,
+        activeMaleMembers,
+        activeFemaleMembers,
+        activeAccounts,
+        expiredAccounts,
+        frozenAccounts,
+        newThisMonth,
+
+        // By account type
+        accountsByType: {
+          individual: individualAccounts,
+          friends: friendsAccounts,
+          family: familyAccounts,
+          academy: academyAccounts,
+        },
+
+        // Subscriptions by package type
+        gymSubsByCategory: byCategory,
+        gymSubsByDuration: byDuration,
+
+        // Revenue
+        thisMonthRevenue,
+        academyRevenue,
+        gymRevenue: thisMonthRevenue - academyRevenue,
+
+        // Expiring
+        expiringThisWeek,
+        expiringThisMonth,
+        expiringAcademyThisWeek,
+        expiringSubs: expiringSubs.map((s) => ({
+          memberName: s.memberId?.fullName,
+          phone: s.memberId?.phone,
+          packageName: s.packageId?.name,
+          endDate: s.endDate,
+          daysLeft: Math.ceil(
+            (new Date(s.endDate) - today) / (1000 * 60 * 60 * 24),
+          ),
+        })),
+
+        // Academy
+        activeAcademyChildren,
+        academyBoys,
+        academyGirls,
+        sportDistribution,
+        groupStats: groupStats.sort((a, b) => b.fillRate - a.fillRate),
+        fullGroups,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
@@ -698,4 +930,5 @@ module.exports = {
   updateSubscription,
   getMembersDirectory,
   deleteAccount,
+  getClubDashboard,
 };
