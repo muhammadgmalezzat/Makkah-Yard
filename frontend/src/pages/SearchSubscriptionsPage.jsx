@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "../api/axios";
@@ -50,11 +50,13 @@ export default function SearchSubscriptionsPage() {
   const [activeOnly, setActiveOnly] = useState(false);
   const [gender, setGender] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
-  const [limit, setLimit] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
   const [responseData, setResponseData] = useState({
     data: [],
     total: 0,
     count: 0,
+    totalPages: 1,
+    currentPage: 1,
   });
 
   const canDelete = user?.role === "admin" || user?.role === "owner";
@@ -68,6 +70,11 @@ export default function SearchSubscriptionsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [packageType, debouncedSearch, startDate, endDate, activeOnly, gender]);
+
   const { isLoading, refetch } = useQuery({
     queryKey: [
       "membersDirectory",
@@ -77,7 +84,7 @@ export default function SearchSubscriptionsPage() {
       endDate,
       activeOnly,
       gender,
-      limit,
+      currentPage,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -87,7 +94,8 @@ export default function SearchSubscriptionsPage() {
       if (endDate) params.append("endDate", endDate);
       if (activeOnly) params.append("activeOnly", "true");
       if (gender !== "all") params.append("gender", gender);
-      params.append("limit", limit.toString());
+      params.append("page", currentPage.toString());
+      params.append("limit", "50");
 
       const response = await axios.get(
         `/subscriptions/members-directory?${params.toString()}`,
@@ -96,15 +104,18 @@ export default function SearchSubscriptionsPage() {
         data: response.data.data || [],
         total: response.data.total || 0,
         count: response.data.count || 0,
+        totalPages: response.data.totalPages || 1,
+        currentPage: response.data.currentPage || 1,
       });
       return response.data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    cacheTime: 0,
   });
 
   const results = responseData.data;
   const total = responseData.total;
   const count = responseData.count;
+  const totalPages = responseData.totalPages;
 
   const handleDelete = async (accountId, memberName) => {
     const confirmed = window.confirm(
@@ -153,9 +164,9 @@ export default function SearchSubscriptionsPage() {
             <p className="text-sm font-semibold text-blue-700">
               {total} عضو إجمالي
             </p>
-            {count < total && (
+            {totalPages > 1 && (
               <p className="text-xs text-blue-600 mt-1">
-                عرض {count} من {total}
+                صفحة {currentPage} من {totalPages}
               </p>
             )}
           </div>
@@ -281,6 +292,7 @@ export default function SearchSubscriptionsPage() {
               setEndDate("");
               setActiveOnly(false);
               setGender("all");
+              setCurrentPage(1);
             }}
             className="text-xs font-semibold text-blue-600 hover:text-blue-700"
           >
@@ -298,14 +310,59 @@ export default function SearchSubscriptionsPage() {
         </div>
       )}
 
-      {/* Load More Button */}
-      {!isLoading && results.length > 0 && count < total && (
-        <button
-          onClick={() => setLimit((prev) => prev + 100)}
-          className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition font-medium text-sm"
-        >
-          تحميل المزيد ({total - count} متبقي)
-        </button>
+      {/* Pagination Controls */}
+      {!isLoading && results.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            السابق
+          </button>
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(
+                (p) =>
+                  p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2,
+              )
+              .reduce((acc, p, idx, arr) => {
+                if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, idx) =>
+                p === "..." ? (
+                  <span key={`dots-${idx}`} className="px-2 text-gray-400">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium min-w-[40px] transition ${
+                      currentPage === p
+                        ? "bg-blue-600 text-white"
+                        : "border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+          </div>
+
+          <button
+            onClick={() =>
+              setCurrentPage(Math.min(totalPages, currentPage + 1))
+            }
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            التالي
+          </button>
+        </div>
       )}
 
       {/* Empty State - No Results */}
