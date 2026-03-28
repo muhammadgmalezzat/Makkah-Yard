@@ -362,6 +362,8 @@ async function run() {
       });
 
       // ── Partner & sub_adult members ──────────────
+      let partnerAssigned = false; // track if partner slot is taken
+
       for (const ar of adultRows) {
         if (ar === primaryRow) continue;
         const memberName = sanitize(ar["fullName"]);
@@ -374,9 +376,17 @@ async function run() {
           continue;
         }
 
-        const isPartner =
+        // First additional adult = partner (included in primary)
+        // All others = sub_adult (pay extra)
+        const isPartnerRole =
           roleKey.startsWith("إضافي") || roleKey.startsWith("اضافي");
-        const memberRole = isPartner ? "partner" : "sub_adult";
+        let memberRole;
+        if (isPartnerRole && !partnerAssigned) {
+          memberRole = "partner";
+          partnerAssigned = true;
+        } else {
+          memberRole = "sub_adult";
+        }
 
         const memberPkg = await Package.findOne({
           category: rolePkgMap.category,
@@ -418,8 +428,9 @@ async function run() {
           }
         }
 
-        // Partners are included in primary member's subscription - no separate subscription for them
-        if (!isPartner && memberPkg) {
+        // Partner = no subscription, no payment (included in primary)
+        // Sub_adult = has own subscription and payment
+        if (memberRole === "sub_adult" && memberPkg) {
           const newSub = await Subscription.create({
             memberId: newMember._id,
             accountId: createdAccount._id,
@@ -441,6 +452,11 @@ async function run() {
             paidAt: mStartDate,
             createdBy: adminUserId,
           });
+          console.log(
+            `   👤 ${memberName} — فرعي بالغ | ${memberPkg.name} | ${memberPkg.price} ريال`,
+          );
+        } else if (memberRole === "partner") {
+          console.log(`   👥 ${memberName} — شريك (مشمول في الأساسي)`);
         }
       }
 

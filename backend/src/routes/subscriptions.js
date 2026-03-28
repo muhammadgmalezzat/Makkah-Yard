@@ -10,10 +10,19 @@ const {
   updateSubscription,
   getMembersDirectory,
   deleteAccount,
+  getClubDashboard,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
 const router = express.Router();
+
+// Club dashboard (must be before :id routes)
+router.get(
+  "/club-dashboard",
+  protect,
+  allowRoles("reception", "supervisor", "admin", "owner"),
+  getClubDashboard,
+);
 
 // Create new subscription
 router.post(
