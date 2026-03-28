@@ -343,10 +343,6 @@ const getAccountProfile = async (req, res, next) => {
   try {
     const { accountId } = req.params;
 
-    console.log("=== getAccountProfile ===");
-    console.log("accountId param:", req.params.accountId);
-    console.log("accountId type:", typeof req.params.accountId);
-
     // Get account
     const account = await Account.findById(accountId);
     if (!account) {
@@ -357,15 +353,6 @@ const getAccountProfile = async (req, res, next) => {
 
     // Get ALL members in this account
     const members = await Member.find({ accountId }).sort({ role: 1 });
-    console.log("Members found:", members.length);
-    console.log(
-      "Members:",
-      members.map((m) => ({
-        name: m.fullName,
-        role: m.role,
-        accountId: m.accountId.toString(),
-      })),
-    );
 
     // Get subscriptions for each member
     const membersWithSubs = await Promise.all(
@@ -381,8 +368,6 @@ const getAccountProfile = async (req, res, next) => {
           .populate("groupId", "name schedule")
           .sort({ createdAt: -1 });
 
-        console.log(`Academy subs for ${member.fullName}:`, academySubs.length);
-
         return {
           member,
           gymSubscription: gymSub || null,
@@ -391,13 +376,25 @@ const getAccountProfile = async (req, res, next) => {
       }),
     );
 
-    // Get total payments for this account
-    const allMemberIds = members.map((m) => m._id);
-    const payments = await Payment.find({ memberId: { $in: allMemberIds } })
+    // Get total payments for this account (excluding partner members)
+    const memberIds = members.map((m) => m._id);
+    const payments = await Payment.find({ memberId: { $in: memberIds } })
       .sort({ createdAt: -1 })
       .populate("createdBy", "name");
 
-    const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const partnerIds = members
+      .filter((m) => m.role === "partner")
+      .map((m) => m._id.toString());
+
+    // Exclude partner payments from total
+    const relevantPayments = payments.filter(
+      (p) => !partnerIds.includes(p.memberId.toString()),
+    );
+
+    const totalPaid = relevantPayments.reduce(
+      (sum, p) => sum + (p.amount || 0),
+      0,
+    );
 
     // Get primary member's active subscription
     const primaryMember = members.find((m) => m.role === "primary");
@@ -414,14 +411,14 @@ const getAccountProfile = async (req, res, next) => {
         account,
         primarySubscription: primarySub,
         members: membersWithSubs,
-        payments,
+        payments: relevantPayments,
         totalPaid,
         stats: {
           totalMembers: members.length,
           activeMembers: members.filter((m) => m.isActive).length,
-          totalPayments: payments.length,
+          totalPayments: relevantPayments.length,
           totalPaid,
-          lastPaymentDate: payments[0]?.paidAt || null,
+          lastPaymentDate: relevantPayments[0]?.paidAt || null,
         },
       },
     });

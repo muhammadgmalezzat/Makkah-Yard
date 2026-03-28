@@ -249,28 +249,7 @@ async function run() {
           gender: "male",
         });
 
-        createdSubPart = await Subscription.create({
-          memberId: createdPartner._id,
-          accountId: createdAccount._id,
-          packageId: pkg._id,
-          startDate,
-          endDate,
-          status,
-          pricePaid: pkg.price,
-          type: "gym",
-          sport: "general",
-          createdBy: adminUserId,
-        });
-
-        await Payment.create({
-          subscriptionId: createdSubPart._id,
-          memberId: createdPartner._id,
-          amount: pkg.price,
-          method: "cash",
-          type: "new",
-          paidAt: startDate,
-          createdBy: adminUserId,
-        });
+        // Partner is included in primary member's subscription - no separate subscription for them
       }
 
       await AuditLog.create({
