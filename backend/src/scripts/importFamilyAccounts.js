@@ -418,7 +418,8 @@ async function run() {
           }
         }
 
-        if (memberPkg) {
+        // Partners are included in primary member's subscription - no separate subscription for them
+        if (!isPartner && memberPkg) {
           const newSub = await Subscription.create({
             memberId: newMember._id,
             accountId: createdAccount._id,
