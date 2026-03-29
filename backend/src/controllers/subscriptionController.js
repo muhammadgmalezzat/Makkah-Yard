@@ -470,7 +470,7 @@ const getMembersDirectory = async (req, res, next) => {
 
     // Step 2: Find ALL primary members matching filters (for counting)
     let memberFilter = {
-      role: "primary",
+     // role: "primary",
       isActive: true,
       accountId: { $in: filteredAccounts },
     };
@@ -481,6 +481,8 @@ const getMembersDirectory = async (req, res, next) => {
         { phone: { $regex: q.trim(), $options: "i" } },
         { email: { $regex: q.trim(), $options: "i" } },
       ];
+    } else {
+      memberFilter.role = "primary";
     }
 
     // Get total count of primary members BEFORE pagination
