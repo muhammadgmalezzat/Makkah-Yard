@@ -15,6 +15,8 @@ const {
   activeTodayCtrl,
   dashboardCtrl,
   updateGroup,
+  updateMemberCtrl,
+  updateSubscriptionCtrl,
 } = require("../controllers/academyController");
 
 // ============ SPORTS ENDPOINTS ============
@@ -317,5 +319,21 @@ router.post("/subscriptions/:id/change-group", protect, changeGroupCtrl);
 
 // POST /api/academy/members/:memberId/add-sport - add new sport to child
 router.post("/members/:memberId/add-sport", protect, addSportCtrl);
+
+// PUT /api/academy/members/:id - update member profile
+router.put(
+  "/members/:id",
+  protect,
+  allowRoles("admin", "owner", "reception", "supervisor"),
+  updateMemberCtrl,
+);
+
+// PUT /api/academy/subscriptions/:id - update subscription dates
+router.put(
+  "/subscriptions/:id",
+  protect,
+  allowRoles("admin", "owner", "reception", "supervisor"),
+  updateSubscriptionCtrl,
+);
 
 module.exports = router;

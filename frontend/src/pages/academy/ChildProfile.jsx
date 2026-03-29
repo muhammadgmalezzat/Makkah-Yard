@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "../../api/axios";
@@ -20,6 +20,27 @@ export default function ChildProfile() {
   const [changeError, setChangeError] = useState("");
   const [changeSuccess, setChangeSuccess] = useState("");
 
+  // Edit profile state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    phone: "",
+    gender: "male",
+    dateOfBirth: "",
+    guardianName: "",
+    guardianPhone: "",
+    guardianRelation: "",
+  });
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Edit subscription dates state
+  const [showEditSubDatesModal, setShowEditSubDatesModal] = useState(false);
+  const [editSubForm, setEditSubForm] = useState({
+    startDate: "",
+    endDate: "",
+  });
+  const [editSubLoading, setEditSubLoading] = useState(false);
+
   // Fetch child profile
   const {
     data: profile,
@@ -33,6 +54,23 @@ export default function ChildProfile() {
       return response.data;
     },
   });
+
+  // Populate edit form when member data loads
+  useEffect(() => {
+    if (profile?.member) {
+      setEditForm({
+        fullName: profile.member.fullName || "",
+        phone: profile.member.phone || "",
+        gender: profile.member.gender || "male",
+        dateOfBirth: profile.member.dateOfBirth
+          ? new Date(profile.member.dateOfBirth).toISOString().split("T")[0]
+          : "",
+        guardianName: profile.member.guardianName || "",
+        guardianPhone: profile.member.guardianPhone || "",
+        guardianRelation: profile.member.guardianRelation || "",
+      });
+    }
+  }, [profile?.member]);
 
   // Fetch sports for change sport modal
   const { data: sports = [] } = useQuery({
@@ -189,6 +227,50 @@ export default function ChildProfile() {
     }
   };
 
+  // Handle edit member submit
+  const handleEditSubmit = async () => {
+    try {
+      setEditLoading(true);
+      await axios.put(`/academy/members/${memberId}`, editForm);
+      setShowEditModal(false);
+      refetchProfile();
+      alert("✅ تم تحديث البيانات بنجاح");
+    } catch (error) {
+      alert(error.response?.data?.message || "حدث خطأ أثناء الحفظ");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Handle edit subscription dates submit
+  const handleEditSubDatesSubmit = async () => {
+    try {
+      setEditSubLoading(true);
+      await axios.put(
+        `/academy/subscriptions/${selectedSubscription._id}`,
+        editSubForm,
+      );
+      setShowEditSubDatesModal(false);
+      setSelectedSubscription(null);
+      refetchProfile();
+      alert("✅ تم تحديث التواريخ بنجاح");
+    } catch (error) {
+      alert(error.response?.data?.message || "حدث خطأ أثناء الحفظ");
+    } finally {
+      setEditSubLoading(false);
+    }
+  };
+
+  // Open subscription date edit modal
+  const openSubEditDatesModal = (sub) => {
+    setSelectedSubscription(sub);
+    setEditSubForm({
+      startDate: new Date(sub.startDate).toISOString().split("T")[0],
+      endDate: new Date(sub.endDate).toISOString().split("T")[0],
+    });
+    setShowEditSubDatesModal(true);
+  };
+
   // Handle add sport
   const handleAddSport = () => {
     navigate(`/academy/new`, {
@@ -250,13 +332,21 @@ export default function ChildProfile() {
       <div className="mb-6 sm:mb-8">
         <button
           onClick={() => navigate("/academy/sports")}
-          className="text-blue-600 hover:text-blue-700 font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base min-h-[44px] flex items-center"
+          className="text-blue-600 hover:text-blue-700 font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base min-h-[44px]"
         >
           ← العودة
         </button>
-        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 text-right">
-          ملف شخصي: {member.fullName}
-        </h1>
+        <div className="flex items-center justify-between gap-4">
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition min-h-[44px]"
+          >
+            ✏️ تعديل البيانات
+          </button>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 text-right">
+            ملف شخصي: {member.fullName}
+          </h1>
+        </div>
       </div>
 
       {/* Member Info Card */}
@@ -415,6 +505,12 @@ export default function ChildProfile() {
                     <p className="text-xs font-semibold text-gray-900">
                       {formatDate(sub.endDate)}
                     </p>
+                    <button
+                      onClick={() => openSubEditDatesModal(sub)}
+                      className="text-blue-600 text-xs hover:underline mt-2"
+                    >
+                      ✏️ تعديل التواريخ
+                    </button>
                   </div>
 
                   {/* Duration & Price */}
@@ -696,6 +792,260 @@ export default function ChildProfile() {
               >
                 إلغاء
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4"
+          dir="rtl"
+        >
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold">تعديل بيانات الطفل</h2>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    الاسم الكامل
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.fullName}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, fullName: e.target.value })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    رقم الهاتف
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.phone}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, phone: e.target.value })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="05xxxxxxxx"
+                  />
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    الجنس
+                  </label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: "male", label: "ذكر" },
+                      { value: "female", label: "أنثى" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() =>
+                          setEditForm({ ...editForm, gender: opt.value })
+                        }
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition ${
+                          editForm.gender === opt.value
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date of Birth */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    تاريخ الميلاد
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.dateOfBirth}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, dateOfBirth: e.target.value })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Guardian Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    اسم ولي الأمر
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.guardianName}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, guardianName: e.target.value })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Guardian Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    هاتف ولي الأمر
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.guardianPhone}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        guardianPhone: e.target.value,
+                      })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="05xxxxxxxx"
+                  />
+                </div>
+
+                {/* Guardian Relation */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    صلة القرابة
+                  </label>
+                  <select
+                    value={editForm.guardianRelation}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        guardianRelation: e.target.value,
+                      })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">اختر</option>
+                    <option value="father">أب</option>
+                    <option value="mother">أم</option>
+                    <option value="brother">أخ</option>
+                    <option value="sister">أخت</option>
+                    <option value="other">أخرى</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleEditSubmit}
+                  disabled={editLoading}
+                  className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                >
+                  {editLoading ? "جاري الحفظ..." : "حفظ التعديلات"}
+                </button>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Subscription Dates Modal */}
+      {showEditSubDatesModal && selectedSubscription && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-4"
+          dir="rtl"
+        >
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold">تعديل تواريخ الاشتراك</h2>
+                <button
+                  onClick={() => setShowEditSubDatesModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  الرياضة:{" "}
+                  <span className="font-semibold">
+                    {selectedSubscription.sport?.name}
+                  </span>
+                </p>
+
+                {/* Start Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    تاريخ البداية
+                  </label>
+                  <input
+                    type="date"
+                    value={editSubForm.startDate}
+                    onChange={(e) =>
+                      setEditSubForm({
+                        ...editSubForm,
+                        startDate: e.target.value,
+                      })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* End Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    تاريخ النهاية
+                  </label>
+                  <input
+                    type="date"
+                    value={editSubForm.endDate}
+                    onChange={(e) =>
+                      setEditSubForm({
+                        ...editSubForm,
+                        endDate: e.target.value,
+                      })
+                    }
+                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleEditSubDatesSubmit}
+                  disabled={editSubLoading}
+                  className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                >
+                  {editSubLoading ? "جاري الحفظ..." : "حفظ التعديلات"}
+                </button>
+                <button
+                  onClick={() => setShowEditSubDatesModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition"
+                >
+                  إلغاء
+                </button>
+              </div>
             </div>
           </div>
         </div>
