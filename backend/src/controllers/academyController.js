@@ -400,10 +400,31 @@ const activeTodayCtrl = async (req, res, next) => {
       query.groupId = groupId;
     }
 
-    const subscriptions = await AcademySubscription.find(query)
-      .populate("memberId", "fullName phone")
+    let subscriptions = await AcademySubscription.find(query)
+      .populate("memberId", "fullName phone guardianAccountId")
       .populate("groupId", "name schedule")
       .sort({ "groupId.name": 1, "memberId.fullName": 1 });
+
+    // Fetch guardian details for each member
+    subscriptions = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const subObj = sub.toObject();
+
+        if (subObj.memberId?.guardianAccountId) {
+          const guardianMember = await Member.findOne({
+            accountId: subObj.memberId.guardianAccountId,
+            role: "primary",
+          }).select("fullName phone");
+
+          if (guardianMember) {
+            subObj.memberId.guardianName = guardianMember.fullName;
+            subObj.memberId.guardianPhone = guardianMember.phone;
+          }
+        }
+
+        return subObj;
+      }),
+    );
 
     // Prevent browser caching
     res.set(
@@ -641,12 +662,10 @@ const updateSubscriptionCtrl = async (req, res, next) => {
     }
 
     if (new Date(startDate) >= new Date(endDate)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "تاريخ البداية يجب أن يكون قبل تاريخ النهاية",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "تاريخ البداية يجب أن يكون قبل تاريخ النهاية",
+      });
     }
 
     const subscription = await AcademySubscription.findByIdAndUpdate(

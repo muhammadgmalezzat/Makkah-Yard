@@ -62,6 +62,143 @@ export default function CoachList() {
     window.print();
   };
 
+  const handlePrintPDF = () => {
+    if (activeMembers.length === 0) return;
+
+    const sportName = selectedSport?.name || "الرياضة";
+    const today = new Date().toLocaleDateString("ar-SA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Log first member to console for debugging
+    if (activeMembers.length > 0) {
+      console.log("First member:", JSON.stringify(activeMembers[0], null, 2));
+    }
+
+    const rows = activeMembers
+      .map((member, index) => {
+        const guardianName = member.memberId?.guardianName || "-";
+        const guardianPhone =
+          member.memberId?.guardianPhone || member.memberId?.phone || "-";
+        const endDate = member.endDate
+          ? new Date(member.endDate).toLocaleDateString("ar-SA")
+          : "-";
+
+        return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${member.memberId?.fullName || "-"}</td>
+        <td>${guardianName}</td>
+        <td>${guardianPhone}</td>
+        <td>${endDate}</td>
+      </tr>
+    `;
+      })
+      .join("");
+
+    const printContent = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>${sportName}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: 'Arial', 'Tahoma', sans-serif; 
+          direction: rtl;
+          padding: 20px;
+          color: #1f2937;
+        }
+        .header {
+          background: #1d4ed8;
+          color: white;
+          padding: 20px;
+          border-radius: 12px;
+          margin-bottom: 20px;
+          text-align: center;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 8px; }
+        .header h2 { font-size: 16px; font-weight: normal; opacity: 0.9; }
+        .meta {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: #6b7280;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 13px;
+        }
+        th {
+          background: #1d4ed8;
+          color: white;
+          padding: 10px 12px;
+          text-align: center;
+          font-weight: bold;
+        }
+        td {
+          padding: 9px 12px;
+          text-align: center;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        tr:nth-child(even) td { background: #eff6ff; }
+        tr:hover td { background: #dbeafe; }
+        .footer {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 11px;
+          color: #9ca3af;
+        }
+        @media print {
+          body { padding: 10px; }
+          .header { border-radius: 8px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>نادي مكة الرياضي</h1>
+        <h2>رياضة: ${sportName}</h2>
+      </div>
+      <div class="meta">
+        <span>التاريخ: ${today}</span>
+        <span>إجمالي الأعضاء: ${activeMembers.length}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الطفل</th>
+            <th>اسم ولي الأمر</th>
+            <th>هاتف ولي الأمر</th>
+            <th>تاريخ الانتهاء</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <div class="footer">
+        تم إنشاء هذا التقرير بتاريخ ${today} - نادي مكة الرياضي
+      </div>
+    </body>
+    </html>
+  `;
+
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   const selectedSport = sports.find((s) => s._id === filters.sportId);
 
   // Group members by group
@@ -77,12 +214,22 @@ export default function CoachList() {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <button
-          onClick={handlePrint}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold min-h-[44px] flex items-center justify-center"
-        >
-          🖨️ طباعة
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handlePrint}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold min-h-[44px] flex items-center justify-center"
+          >
+            🖨️ طباعة
+          </button>
+          <button
+            onClick={handlePrintPDF}
+            disabled={!activeMembers.length}
+            className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition min-h-[44px]"
+          >
+            <span>📄</span>
+            <span>تنزيل PDF</span>
+          </button>
+        </div>
         <h1 className="text-xl sm:text-3xl font-bold text-right">
           قائمة المدرب لليوم
         </h1>
