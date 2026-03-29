@@ -591,6 +591,84 @@ const updateGroup = async (req, res, next) => {
   }
 };
 
+// PUT /api/academy/members/:id - update member profile data (for reception/admin/owner)
+const updateMemberCtrl = async (req, res, next) => {
+  try {
+    const {
+      fullName,
+      phone,
+      gender,
+      dateOfBirth,
+      guardianName,
+      guardianPhone,
+      guardianRelation,
+    } = req.body;
+    const member = await Member.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          fullName,
+          phone,
+          gender,
+          dateOfBirth,
+          guardianName,
+          guardianPhone,
+          guardianRelation,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!member) {
+      return res
+        .status(404)
+        .json({ success: false, message: "العضو غير موجود" });
+    }
+    res.json({ success: true, message: "تم تحديث البيانات", data: member });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /api/academy/subscriptions/:id - update subscription dates (for reception/admin/owner)
+const updateSubscriptionCtrl = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.body;
+
+    if (!startDate || !endDate) {
+      return res
+        .status(400)
+        .json({ success: false, message: "تاريخ البداية والنهاية مطلوبان" });
+    }
+
+    if (new Date(startDate) >= new Date(endDate)) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "تاريخ البداية يجب أن يكون قبل تاريخ النهاية",
+        });
+    }
+
+    const subscription = await AcademySubscription.findByIdAndUpdate(
+      req.params.id,
+      { $set: { startDate: new Date(startDate), endDate: new Date(endDate) } },
+      { new: true, runValidators: true },
+    );
+    if (!subscription) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الاشتراك غير موجود" });
+    }
+    res.json({
+      success: true,
+      message: "تم تحديث التواريخ",
+      data: subscription,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscriptionCtrl,
   listSubscriptionsCtrl,
@@ -602,4 +680,6 @@ module.exports = {
   activeTodayCtrl,
   dashboardCtrl,
   updateGroup,
+  updateMemberCtrl,
+  updateSubscriptionCtrl,
 };
