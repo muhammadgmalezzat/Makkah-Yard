@@ -59,7 +59,10 @@ export default function SearchSubscriptionsPage() {
     currentPage: 1,
   });
 
-  const canDelete = user?.role === "admin" || user?.role === "owner";
+  const canDelete =
+    user?.role === "admin" ||
+    user?.role === "owner" ||
+    user?.role === "reception";
 
   // Debounce search query
   useEffect(() => {
