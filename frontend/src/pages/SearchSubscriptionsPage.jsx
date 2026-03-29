@@ -494,7 +494,7 @@ export default function SearchSubscriptionsPage() {
                 {canDelete && (
                   <button
                     onClick={() => handleDelete(result.accountId, memberName)}
-                    className="absolute top-3 left-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full p-1 transition"
+                    className="absolute top-10 left-5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full p-2 transition"
                     title="حذف الحساب"
                     disabled={deletingId === result.accountId}
                   >
