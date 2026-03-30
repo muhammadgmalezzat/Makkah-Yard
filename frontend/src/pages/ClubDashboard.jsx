@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
   Bar,
@@ -15,7 +14,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import axios from "../api/axios";
+import { useClubDashboard } from "../hooks";
 
 const COLORS = [
   "#3b82f6",
@@ -27,14 +26,7 @@ const COLORS = [
 ];
 
 export default function ClubDashboard() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["club-dashboard"],
-    queryFn: async () => {
-      const res = await axios.get("/subscriptions/club-dashboard");
-      return res.data.data;
-    },
-    staleTime: 1000 * 60 * 5,
-  });
+  const { data, isLoading, error } = useClubDashboard();
 
   if (isLoading) {
     return (

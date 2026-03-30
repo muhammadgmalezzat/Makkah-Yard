@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import axios from "../../api/axios";
-import { useAuthStore } from "../../store/authStore";
+import { useAcademy, useAuth } from "../../hooks";
 
 export default function GroupsManagement() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
   const [selectedSportId, setSelectedSportId] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -27,27 +25,15 @@ export default function GroupsManagement() {
   });
 
   // Fetch all sports for dropdown
-  const { data: sports = [] } = useQuery({
-    queryKey: ["sports"],
-    queryFn: async () => {
-      const response = await axios.get("/academy/sports");
-      return response.data;
-    },
-  });
+  const { useSports, useGroups, createGroup, updateGroup } = useAcademy();
+  const { data: sports = [] } = useSports();
 
   // Fetch groups
   const {
     data: groups = [],
     refetch: refetchGroups,
     isLoading: groupsLoading,
-  } = useQuery({
-    queryKey: ["groups", selectedSportId],
-    queryFn: async () => {
-      const query = selectedSportId ? `?sportId=${selectedSportId}` : "";
-      const response = await axios.get(`/academy/groups${query}`);
-      return response.data;
-    },
-  });
+  } = useGroups(selectedSportId);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,7 +48,7 @@ export default function GroupsManagement() {
         return;
       }
 
-      await axios.post("/academy/groups", {
+      await createGroup({
         sportId: formData.sportId,
         name: formData.name,
         schedule: formData.schedule,
@@ -103,7 +89,7 @@ export default function GroupsManagement() {
 
   const handleEditSubmit = async () => {
     try {
-      await axios.put(`/academy/groups/${editingGroup._id}`, editForm);
+      await updateGroup(editingGroup._id, editForm);
       closeEditModal();
       refetchGroups();
     } catch (error) {

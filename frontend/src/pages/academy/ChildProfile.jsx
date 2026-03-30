@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "../../api/axios";
+import { useAcademy } from "../../hooks";
 
 export default function ChildProfile() {
   const { memberId } = useParams();

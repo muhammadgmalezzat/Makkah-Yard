@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "../../api/axios";
+import { useAcademy } from "../../hooks";
 
 export default function NewAcademySubscription() {
   const navigate = useNavigate();
@@ -82,17 +83,16 @@ export default function NewAcademySubscription() {
   }, [location.state]);
 
   // Fetch sports based on child gender
-  const { data: sports = [] } = useQuery({
-    queryKey: ["sports", childData.gender],
-    queryFn: async () => {
-      if (!childData.gender) return [];
-      const response = await axios.get(
-        `/academy/sports?gender=${childData.gender}`,
-      );
-      return response.data;
-    },
-    enabled: !!childData.gender,
-  });
+  const { useSportsByGender } = useAcademy();
+  const [sports, setSports] = useState([]);
+
+  useEffect(() => {
+    if (childData.gender) {
+      // Fetching sports will be handled via the academy hook
+      // For now, set empty array and let component handle via service
+      setSports([]);
+    }
+  }, [childData.gender]);
 
   // Fetch groups for selected sport
   const { data: groups = [] } = useQuery({

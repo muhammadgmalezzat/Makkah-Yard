@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import axios from "../api/axios";
-import { useAuthStore } from "../store/authStore";
+import { useAuth } from "../hooks";
 
 const loginSchema = z.object({
   email: z.string().email("بريد إلكتروني غير صحيح"),
@@ -13,9 +12,8 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
+  const { login, isLoading } = useAuth();
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const {
     register,
@@ -26,17 +24,16 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data) => {
-    setLoading(true);
     setError("");
     try {
-      const response = await axios.post("/auth/login", data);
-      const { user, token } = response.data;
-      setAuth(user, token);
-      navigate("/dashboard");
+      login(data, {
+        onSuccess: () => navigate("/dashboard"),
+        onError: (err) => {
+          setError(err.response?.data?.message || "فشل تسجيل الدخول");
+        },
+      });
     } catch (err) {
-      setError(err.response?.data?.message || "فشل تسجيل الدخول");
-    } finally {
-      setLoading(false);
+      setError("حدث خطأ غير متوقع");
     }
   };
 
@@ -88,10 +85,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
           >
-            {loading ? "جاري التحميل..." : "تسجيل الدخول"}
+            {isLoading ? "جاري التحميل..." : "تسجيل الدخول"}
           </button>
         </form>
 

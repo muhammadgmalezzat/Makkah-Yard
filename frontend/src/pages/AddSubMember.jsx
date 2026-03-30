@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import axios from "../api/axios";
+import {
+  useSubscriptions,
+  useSubAdultPackages,
+  useSubChildPackages,
+} from "../hooks";
+import * as subscriptionService from "../services/subscriptionService";
 
 const SPORTS = [
   { id: "football", name: "كرة القدم", icon: "⚽" },
@@ -15,8 +19,6 @@ export default function AddSubMember() {
   // Section 1: Find account
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [primaryMember, setPrimaryMember] = useState(null);
   const [accountError, setAccountError] = useState("");
 
@@ -45,72 +47,26 @@ export default function AddSubMember() {
   const [success, setSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
-  // Fetch sub member packages
-  const { data: subAdultPackages = [] } = useQuery({
-    queryKey: ["packages-sub-adult"],
-    queryFn: async () => {
-      const response = await axios.get(
-        "/packages?category=sub_adult&isActive=true",
-      );
-      return response.data;
-    },
-  });
+  // Fetch hooks
+  const { useSearch, addSubMember: addSubMemberService } = useSubscriptions();
+  const { data: subAdultPackages = [] } = useSubAdultPackages();
+  const { data: subChildPackages = [] } = useSubChildPackages();
+  const { data: foundMembers = [] } = useSearch(searchQuery);
 
-  const { data: subChildPackages = [] } = useQuery({
-    queryKey: ["packages-sub-child"],
-    queryFn: async () => {
-      const response = await axios.get(
-        "/packages?category=sub_child&isActive=true",
-      );
-      console.log("sub_child packages:", response.data);
-      response.data.forEach((pkg) => {
-        console.log(
-          "sub_child package:",
-          pkg.name,
-          "pricePerMonth:",
-          pkg.pricePerMonth,
-        );
-      });
-      return response.data;
-    },
-  });
-
-  // Handle search
-  useEffect(() => {
-    if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
+  // Memoize filtered search results
+  const filteredResults = useMemo(() => {
+    if (
+      searchQuery.trim().length < 2 ||
+      !foundMembers ||
+      foundMembers.length === 0
+    ) {
+      return [];
     }
-
-    const searchFamily = async () => {
-      try {
-        const response = await axios.get(
-          `/subscriptions/search?q=${encodeURIComponent(searchQuery)}`,
-        );
-        console.log("Search response:", response.data);
-
-        // Extract array from response.data.data
-        const allResults = response.data.data || [];
-
-        // Filter to show only primary members with active gym subscriptions
-        const familyResults = allResults.filter(
-          (r) =>
-            r.member?.role === "primary" &&
-            r.lastSubscription?.status === "active",
-        );
-
-        setSearchResults(familyResults);
-        setShowSearchResults(true);
-      } catch (err) {
-        console.error("Search failed", err);
-        setSearchResults([]);
-      }
-    };
-
-    const timer = setTimeout(searchFamily, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    return foundMembers.filter(
+      (r) =>
+        r.member?.role === "primary" && r.lastSubscription?.status === "active",
+    );
+  }, [searchQuery, foundMembers]);
 
   // Calculate age from birthdate
   useEffect(() => {
@@ -142,8 +98,9 @@ export default function AddSubMember() {
         return;
       }
 
-      const subDetails = await axios.get(`/subscriptions/${subscriptionId}`);
-      const subscription = subDetails.data;
+      // Get subscription details using service
+      const subscription =
+        await subscriptionService.getSubscription(subscriptionId);
 
       // Verify it's a family account
       if (subscription.accountId.type !== "family") {
@@ -155,7 +112,6 @@ export default function AddSubMember() {
       setParentSubscriptionId(subscriptionId);
       setPrimaryMember(subscription.memberId);
       setSearchQuery("");
-      setShowSearchResults(false);
       setStep(1);
     } catch (err) {
       setAccountError("فشل تحميل بيانات الحساب");
@@ -283,7 +239,8 @@ export default function AddSubMember() {
       try {
         const numMonths =
           memberType === "sub_child" ? parseInt(selectedMonths, 10) : null;
-        const response = await axios.post("/subscriptions/add-sub-member", {
+
+        const result = await addSubMemberService({
           accountId: selectedAccount,
           memberData,
           packageId: selectedPackage._id,
@@ -294,7 +251,7 @@ export default function AddSubMember() {
         });
 
         setSuccessData({
-          memberName: response.data.member.fullName,
+          memberName: result.member.fullName,
           packageName: selectedPackage.name,
           startDate: new Date(startDate).toLocaleDateString("ar-SA"),
           endDate: subEndDate.toLocaleDateString("ar-SA"),
@@ -396,9 +353,9 @@ export default function AddSubMember() {
             </div>
           )}
 
-          {showSearchResults && searchResults.length > 0 && (
+          {searchQuery.length >= 2 && filteredResults.length > 0 && (
             <div className="space-y-2">
-              {searchResults.map((result) => {
+              {filteredResults.map((result) => {
                 const memberName = result.member?.fullName || "Unknown";
                 const phone = result.member?.phone || "-";
                 const packageName =
@@ -419,13 +376,9 @@ export default function AddSubMember() {
             </div>
           )}
 
-          {showSearchResults &&
-            searchResults.length === 0 &&
-            searchQuery.length >= 2 && (
-              <div className="text-center text-gray-500 py-4">
-                لا توجد نتائج
-              </div>
-            )}
+          {searchQuery.length >= 2 && filteredResults.length === 0 && (
+            <div className="text-center text-gray-500 py-4">لا توجد نتائج</div>
+          )}
         </div>
       </div>
     );

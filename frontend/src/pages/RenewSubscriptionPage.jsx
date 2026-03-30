@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import axios from "../api/axios";
+import { useSubscriptions, usePackages } from "../hooks";
 
 const inputClass =
   "w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-right";
@@ -20,6 +20,9 @@ export default function RenewSubscriptionPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const { renewSubscription } = useSubscriptions();
+  const { useAllPackages } = usePackages();
+
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["subscription", subscriptionId],
     queryFn: async () => {
@@ -28,13 +31,7 @@ export default function RenewSubscriptionPage() {
     },
   });
 
-  const { data: packages = [] } = useQuery({
-    queryKey: ["packages"],
-    queryFn: async () => {
-      const response = await axios.get("/packages");
-      return response.data;
-    },
-  });
+  const { data: packages = [] } = useAllPackages();
 
   const calculateEndDate = (start, durationMonths) => {
     const date = new Date(start);
@@ -51,7 +48,7 @@ export default function RenewSubscriptionPage() {
     setLoading(true);
     setError("");
     try {
-      await axios.post(`/subscriptions/${subscriptionId}/renew`, {
+      await renewSubscription(subscriptionId, {
         packageId: selectedPackage._id,
         startDate,
         paymentMethod,

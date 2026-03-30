@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import axios from "../api/axios";
+import { usePackages } from "../hooks";
+import { Spinner } from "../components/ui";
 
 const categories = [
   { value: "", label: "الكل" },
@@ -23,20 +23,15 @@ const categoryColors = {
 
 export default function PackagesPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
+  const { useAllPackages } = usePackages();
 
-  const {
-    data: packages = [],
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["packages", categoryFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (categoryFilter) params.append("category", categoryFilter);
-      const response = await axios.get(`/packages?${params}`);
-      return response.data;
-    },
-  });
+  const { data: packages = [], isLoading, error } = useAllPackages();
+
+  // Filter packages by category
+  const filteredPackages =
+    categoryFilter === ""
+      ? packages
+      : packages.filter((p) => p.category === categoryFilter);
 
   const getCategoryLabel = (value) =>
     categories.find((c) => c.value === value)?.label ?? value;
@@ -49,7 +44,7 @@ export default function PackagesPage() {
           الحزم والأسعار
         </h1>
         <p className="text-gray-500 mt-1 text-sm sm:text-base">
-          {!isLoading && `${packages.length} حزمة متاحة`}
+          {!isLoading && `${filteredPackages.length} حزمة متاحة`}
         </p>
       </div>
 
@@ -81,31 +76,13 @@ export default function PackagesPage() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-          <svg
-            className="animate-spin w-5 h-5 text-blue-500"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            />
-          </svg>
+          <Spinner />
           <span className="text-sm">جاري التحميل...</span>
         </div>
       )}
 
       {/* Empty */}
-      {packages.length === 0 && !isLoading && (
+      {filteredPackages.length === 0 && !isLoading && (
         <div className="text-center py-16 text-gray-300">
           <div className="text-5xl mb-3">📦</div>
           <p className="text-sm">لا توجد حزم في هذه الفئة</p>
@@ -114,7 +91,7 @@ export default function PackagesPage() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {packages.map((pkg) => (
+        {filteredPackages.map((pkg) => (
           <div
             key={pkg._id}
             className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition p-4 sm:p-6 flex flex-col"

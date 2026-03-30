@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "../api/axios";
-import { useAuthStore } from "../store/authStore";
+import { useMessaging } from "../hooks";
+import { useAuth } from "../hooks";
 
 // Message Formatters
 const formatManagementMessage = (data) => {
@@ -163,7 +163,8 @@ const TEMPLATES = [
 ];
 
 export default function MessagingPage() {
-  const { user, token } = useAuthStore();
+  const { user } = useAuth();
+  const { getStats, getDailyReport, sendMessage, sendEmail } = useMessaging();
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -204,12 +205,8 @@ export default function MessagingPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get("/messaging/stats", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setStats(res.data.data);
+        const res = await getStats();
+        setStats(res);
       } catch (err) {
         console.error("Failed to fetch stats");
       }
@@ -240,16 +237,9 @@ export default function MessagingPage() {
       // Fetch daily report data
       setIsLoading(true);
       try {
-        const res = await axios.get(
-          `/messaging/daily-report?date=${selectedDate}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-        setReportData(res.data.data);
-        const templateMessage = template.getMessageFromReport(res.data.data);
+        const res = await getDailyReport(selectedDate);
+        setReportData(res);
+        const templateMessage = template.getMessageFromReport(res);
         setMessage(templateMessage);
         setShowPreview(true);
 
@@ -314,23 +304,15 @@ export default function MessagingPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        "/messaging/send",
-        {
-          phone: channel !== "email" ? phone : null,
-          email: channel === "email" ? email : null,
-          message: message.trim(),
-          channel,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const response = await sendMessage({
+        phone: channel !== "email" ? phone : null,
+        email: channel === "email" ? email : null,
+        message: message.trim(),
+        channel,
+      });
 
-      if (response.data.success) {
-        setSuccessMessage(response.data.message);
+      if (response.success) {
+        setSuccessMessage(response.message);
         // Reset form
         setPhone("");
         setEmail("");
@@ -365,23 +347,16 @@ export default function MessagingPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        "/messaging/test",
-        {
-          phone,
-          channel,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const response = await sendMessage({
+        phone,
+        channel,
+        isTest: true,
+      });
 
-      if (response.data.success) {
-        setSuccessMessage(response.data.message);
+      if (response.success) {
+        setSuccessMessage(response.message);
       } else {
-        setErrorMessage(response.data.message || "فشل الإرسال");
+        setErrorMessage(response.message || "فشل الإرسال");
       }
     } catch (error) {
       setErrorMessage(error.response?.data?.message || "حدث خطأ أثناء الإرسال");

@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
-import axios from "../api/axios";
+import { useSubscriptions, usePackages } from "../hooks";
 
 const memberSchema = z.object({
   fullName: z.string().min(2, "الاسم مطلوب"),
@@ -37,6 +36,8 @@ const errorClass = "text-red-500 text-xs mt-1 text-right";
 
 export default function NewSubscriptionPage() {
   const navigate = useNavigate();
+  const { useAllPackages } = usePackages();
+  const { createSubscription } = useSubscriptions();
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
@@ -56,13 +57,7 @@ export default function NewSubscriptionPage() {
     reset,
   } = useForm({ resolver: zodResolver(memberSchema) });
 
-  const { data: packages = [] } = useQuery({
-    queryKey: ["packages"],
-    queryFn: async () => {
-      const response = await axios.get("/packages");
-      return response.data;
-    },
-  });
+  const { data: packages = [] } = useAllPackages();
 
   const filteredPackages = packages.filter((pkg) => {
     if (selectedType === "individual") return pkg.category === "individual";
@@ -114,7 +109,9 @@ export default function NewSubscriptionPage() {
         body.primaryData = window.primaryData;
         body.partnerData = window.partnerData || null;
       }
-      await axios.post("/subscriptions", body);
+
+      await createSubscription(body);
+
       setSuccessData({
         type: selectedType,
         packageName: selectedPackage.name,

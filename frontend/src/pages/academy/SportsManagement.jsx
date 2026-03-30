@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import axios from "../../api/axios";
-import { useAuthStore } from "../../store/authStore";
+import { useAcademy } from "../../hooks";
+import { useAuth } from "../../hooks";
 
 export default function SportsManagement() {
-  const user = useAuthStore((state) => state.user);
+  const { user } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -18,13 +17,8 @@ export default function SportsManagement() {
   const [success, setSuccess] = useState("");
 
   // Fetch all sports
-  const { data: sports = [], refetch } = useQuery({
-    queryKey: ["sports"],
-    queryFn: async () => {
-      const response = await axios.get("/academy/sports");
-      return response.data;
-    },
-  });
+  const { useSports, createSport } = useAcademy();
+  const { data: sports = [], refetch } = useSports();
 
   // Group sports by gender
   const sportsByGender = {
@@ -46,7 +40,7 @@ export default function SportsManagement() {
         return;
       }
 
-      await axios.post("/academy/sports", {
+      await createSport({
         name: formData.name,
         nameEn: formData.nameEn || formData.name,
         gender: formData.gender,

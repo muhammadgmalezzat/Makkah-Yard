@@ -12,21 +12,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import axios from "../../api/axios";
+import { useAcademyDashboard } from "../../hooks";
 
 export default function AcademyDashboard() {
   // Fetch dashboard data
-  const {
-    data: dashboard,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["academyDashboard"],
-    queryFn: async () => {
-      const response = await axios.get("/academy/dashboard");
-      return response.data;
-    },
-  });
+  const { data: dashboard, isLoading, error } = useAcademyDashboard();
 
   if (isLoading) {
     return (
