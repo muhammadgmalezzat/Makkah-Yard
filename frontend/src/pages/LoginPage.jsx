@@ -95,17 +95,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-gray-700 mb-2">
-            <strong>حسابات التجربة:</strong>
-          </p>
-          <p className="text-sm text-gray-700 mb-1">
-            Admin: admin@gym.com / admin123456
-          </p>
-          <p className="text-sm text-gray-700">
-            Reception: reception@gym.com / reception123
-          </p>
-        </div>
+        
       </div>
     </div>
   );
