@@ -626,6 +626,91 @@ const getMembersDirectory = async (req, res, next) => {
   }
 };
 
+const deleteMember = async (req, res, next) => {
+  try {
+    const { memberId } = req.params;
+
+    const member = await Member.findById(memberId);
+    if (!member) {
+      return res
+        .status(404)
+        .json({ success: false, message: "العضو غير موجود" });
+    }
+
+    // If primary → delete entire account
+    if (member.role === "primary") {
+      const accountId = member.accountId;
+      const allMembers = await Member.find({ accountId });
+      const allMemberIds = allMembers.map((m) => m._id);
+
+      console.log("Deleting account (primary member):", accountId);
+      console.log("Members to delete:", allMemberIds.length);
+
+      // Delete all related data in order
+      await Payment.deleteMany({ memberId: { $in: allMemberIds } });
+      await AuditLog.deleteMany({ accountId });
+      await Subscription.deleteMany({ memberId: { $in: allMemberIds } });
+
+      const academySubs = await AcademySubscription.find({
+        memberId: { $in: allMemberIds },
+      });
+      for (const sub of academySubs) {
+        await AcademyGroup.findByIdAndUpdate(
+          sub.groupId,
+          { $inc: { currentCount: -1 } },
+          { new: true },
+        );
+      }
+      await AcademySubscription.deleteMany({
+        memberId: { $in: allMemberIds },
+      });
+
+      await Member.deleteMany({ accountId });
+      await Account.findByIdAndDelete(accountId);
+
+      console.log("Account deleted successfully:", accountId);
+
+      return res.json({
+        success: true,
+        message: "تم حذف الحساب وجميع البيانات المرتبطة به",
+        deletedType: "account",
+        deleted: {
+          membersCount: allMemberIds.length,
+        },
+      });
+    }
+
+    // If not primary → delete only this member + their data
+    console.log("Deleting member:", memberId);
+
+    await Payment.deleteMany({ memberId: member._id });
+    await Subscription.deleteMany({ memberId: member._id });
+
+    const academySubs = await AcademySubscription.find({
+      memberId: member._id,
+    });
+    for (const sub of academySubs) {
+      await AcademyGroup.findByIdAndUpdate(
+        sub.groupId,
+        { $inc: { currentCount: -1 } },
+        { new: true },
+      );
+    }
+    await AcademySubscription.deleteMany({ memberId: member._id });
+    await Member.findByIdAndDelete(member._id);
+
+    console.log("Member deleted successfully:", memberId);
+
+    return res.json({
+      success: true,
+      message: "تم حذف العضو وبياناته",
+      deletedType: "member",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteAccount = async (req, res, next) => {
   try {
     const { accountId } = req.params;
@@ -931,6 +1016,7 @@ module.exports = {
   getAccountProfile,
   updateSubscription,
   getMembersDirectory,
+  deleteMember,
   deleteAccount,
   getClubDashboard,
 };

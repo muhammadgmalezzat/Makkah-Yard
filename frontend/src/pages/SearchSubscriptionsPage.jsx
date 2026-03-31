@@ -51,6 +51,42 @@ export default function SearchSubscriptionsPage() {
   const [gender, setGender] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'تأكيد',
+    cancelText: 'إلغاء',
+    confirmVariant: 'danger',
+    onConfirm: null,
+  });
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
+
+  const showConfirm = (title, message, onConfirm, confirmVariant = 'danger') => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      confirmText: 'تأكيد',
+      cancelText: 'إلغاء',
+      confirmVariant,
+      onConfirm,
+    });
+  };
+
+  const showAlert = (message, type = 'success') => {
+    setAlertModal({
+      isOpen: true,
+      title: type === 'success' ? '✅ تم بنجاح' : type === 'error' ? '❌ خطأ' : '⚠️ تنبيه',
+      message,
+      type,
+    });
+  };
   const [responseData, setResponseData] = useState({
     data: [],
     total: 0,
@@ -120,23 +156,26 @@ export default function SearchSubscriptionsPage() {
   const count = responseData.count;
   const totalPages = responseData.totalPages;
 
-  const handleDelete = async (accountId, memberName) => {
-    const confirmed = window.confirm(
-      `⚠️ تحذير: سيتم حذف حساب "${memberName}" وجميع بياناته نهائياً.\n\nهل أنت متأكد؟`,
+  const handleDelete = (memberId, memberRole, memberName) => {
+    showConfirm(
+      memberRole === 'primary' ? 'حذف الحساب' : 'حذف العضو',
+      memberRole === 'primary'
+        ? `سيتم حذف حساب "${memberName}" وجميع أعضائه وبياناتهم نهائياً. هل أنت متأكد؟`
+        : `سيتم حذف العضو "${memberName}" فقط دون التأثير على باقي الحساب. هل أنت متأكد؟`,
+      async () => {
+        try {
+          setDeletingId(memberId);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          await axios.delete(`/subscriptions/members/${memberId}`);
+          await refetch();
+          showAlert('تم الحذف بنجاح', 'success');
+        } catch (error) {
+          showAlert(error.response?.data?.message || 'حدث خطأ أثناء الحذف', 'error');
+        } finally {
+          setDeletingId(null);
+        }
+      }
     );
-    if (!confirmed) return;
-
-    try {
-      setDeletingId(accountId);
-      await axios.delete(`/subscriptions/accounts/${accountId}`);
-      // Refetch results
-      await refetch();
-      alert("✅ تم حذف الحساب بنجاح");
-    } catch (error) {
-      alert(error.response?.data?.message || "حدث خطأ أثناء الحذف");
-    } finally {
-      setDeletingId(null);
-    }
   };
 
   const isExpired = (dateStr) => dateStr && new Date(dateStr) < new Date();
@@ -503,17 +542,19 @@ export default function SearchSubscriptionsPage() {
                 {/* Delete Button */}
                 {canDelete && (
                   <button
-                    onClick={() => handleDelete(result.accountId, memberName)}
+                    onClick={() =>
+                      handleDelete(member._id, member.role, memberName)
+                    }
                     className="absolute top-10 left-5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full p-2 transition"
                     title="حذف الحساب"
-                    disabled={deletingId === result.accountId}
+                    disabled={deletingId === member._id}
                   >
                     🗑️
                   </button>
                 )}
 
                 {/* Loading Overlay */}
-                {deletingId === result.accountId && (
+                {deletingId === member._id && (
                   <div className="absolute inset-0 bg-white bg-opacity-80 rounded-2xl flex items-center justify-center z-10">
                     <span className="text-red-500 text-sm font-medium">
                       جاري الحذف...
@@ -549,6 +590,93 @@ export default function SearchSubscriptionsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+      {confirmModal.isOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          dir="rtl"
+        >
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100">
+            {/* Icon */}
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${
+                confirmModal.confirmVariant === "danger"
+                  ? "bg-red-50"
+                  : "bg-blue-50"
+              }`}
+            >
+              <span className="text-xl">
+                {confirmModal.confirmVariant === "danger" ? "🗑️" : "✏️"}
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-gray-900 mb-2">
+              {confirmModal.title}
+            </h3>
+            <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => confirmModal.onConfirm?.()}
+                className={`flex-1 py-2.5 rounded-xl font-semibold text-sm text-white transition ${
+                  confirmModal.confirmVariant === "danger"
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {confirmModal.confirmText}
+              </button>
+              <button
+                onClick={() =>
+                  setConfirmModal((prev) => ({ ...prev, isOpen: false }))
+                }
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+              >
+                {confirmModal.cancelText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {alertModal.isOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          dir="rtl"
+        >
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-gray-100">
+            <div
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
+                alertModal.type === "success"
+                  ? "bg-green-50"
+                  : alertModal.type === "error"
+                    ? "bg-red-50"
+                    : "bg-amber-50"
+              }`}
+            >
+              <span className="text-xl">
+                {alertModal.type === "success"
+                  ? "✅"
+                  : alertModal.type === "error"
+                    ? "❌"
+                    : "⚠️"}
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-gray-900 mb-1">
+              {alertModal.title}
+            </h3>
+            <p className="text-gray-500 text-sm mb-6">{alertModal.message}</p>
+            <button
+              onClick={() =>
+                setAlertModal((prev) => ({ ...prev, isOpen: false }))
+              }
+              className="w-full py-2.5 rounded-xl font-semibold text-sm bg-blue-600 text-white hover:bg-blue-700 transition"
+            >
+              حسناً
+            </button>
+          </div>
         </div>
       )}
     </div>

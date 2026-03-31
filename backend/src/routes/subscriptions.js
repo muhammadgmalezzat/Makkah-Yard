@@ -9,6 +9,7 @@ const {
   getAccountProfile,
   updateSubscription,
   getMembersDirectory,
+  deleteMember,
   deleteAccount,
   getClubDashboard,
 } = require("../controllers/subscriptionController");
@@ -91,11 +92,19 @@ router.post(
   renewSubscriptionCtrl,
 );
 
-// Delete account and all related data
+// Delete member (primary = delete account, others = delete member only)
+router.delete(
+  "/members/:memberId",
+  protect,
+  allowRoles("admin", "owner", "reception"),
+  deleteMember,
+);
+
+// Delete account and all related data (admin use only)
 router.delete(
   "/accounts/:accountId",
   protect,
-  allowRoles("admin", "owner"),
+  allowRoles("admin", "owner", "reception"),
   deleteAccount,
 );
 
