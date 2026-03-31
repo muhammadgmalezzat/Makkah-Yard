@@ -45,6 +45,19 @@ const memberSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",
     },
+    guardianName: {
+      type: String,
+      trim: true,
+    },
+    guardianPhone: {
+      type: String,
+      trim: true,
+    },
+    guardianRelation: {
+      type: String,
+      enum: ["father", "mother", "brother", "sister", "other", ""],
+      default: "",
+    },
     isActive: {
       type: Boolean,
       default: true,
