@@ -331,7 +331,7 @@ export default function ChildProfile() {
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <button
-          onClick={() => navigate("/academy/sports")}
+          onClick={() => navigate("/subscriptions/search")}
           className="text-blue-600 hover:text-blue-700 font-semibold mb-4 flex items-center gap-2 text-sm sm:text-base min-h-[44px]"
         >
           ← العودة

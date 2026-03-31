@@ -198,9 +198,10 @@ export default function NewAcademySubscription() {
   // Calculate price based on months and packages
   const calculatePrice = (months, monthlyPkg, annualPkg) => {
     if (!monthlyPkg) return 0;
-    if (months === 12) return annualPkg?.price || monthlyPkg.pricePerMonth * 12;
-    if (months === 6) return monthlyPkg.pricePerMonth * 5;
-    return monthlyPkg.pricePerMonth * months;
+    const pricePerMonth = monthlyPkg.pricePerMonth || 0;
+    if (months === 12) return annualPkg?.price ?? pricePerMonth * 10;
+    if (months === 6) return pricePerMonth * 5;
+    return pricePerMonth * months;
   };
 
   // Calculate age from birthdate
