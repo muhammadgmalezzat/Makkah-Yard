@@ -61,8 +61,8 @@ memberSchema.virtual("age").get(function () {
   );
 });
 
-// Sparse unique indexes - allows multiple absent/undefined values
-memberSchema.index({ phone: 1 }, { unique: true, sparse: true });
+// Sparse indexes - allows multiple absent/undefined values and multiple phone values for family members
+memberSchema.index({ phone: 1 }, { sparse: true });
 memberSchema.index({ nationalId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model("Member", memberSchema);
