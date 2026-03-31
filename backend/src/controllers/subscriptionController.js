@@ -476,7 +476,9 @@ const getMembersDirectory = async (req, res, next) => {
     };
     if (gender && gender !== "all") memberFilter.gender = gender;
     if (q && q.trim()) {
-        memberFilter.role = { $in: ["primary", "partner", "sub_adult"] };
+      memberFilter.role = {
+        $in: ["primary", "partner", "sub_adult", "child"],
+      };
 
       memberFilter.$or = [
         { fullName: { $regex: q.trim(), $options: "i" } },
@@ -504,9 +506,8 @@ const getMembersDirectory = async (req, res, next) => {
     let academyMembers = [];
     let totalAcademyMembers = 0;
     if (
-      !packageType ||
-      packageType === "all" ||
-      packageType === "academy_only"
+      !q?.trim() &&
+      (!packageType || packageType === "all" || packageType === "academy_only")
     ) {
       const academyAccountIds = await Account.find({
         type: "academy_only",
