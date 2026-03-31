@@ -5,7 +5,7 @@ const errorHandler = (err, req, res, next) => {
   if (err.code === 11000) {
     const field = Object.keys(err.keyPattern || err.keyValue || {})[0];
     const fieldMessages = {
-      phone: "رقم الهاتف مسجل مسبقاً",
+     // phone: "رقم الهاتف مسجل مسبقاً",
       nationalId: "رقم الهوية مسجل مسبقاً",
       email: "البريد الإلكتروني مسجل مسبقاً",
     };
