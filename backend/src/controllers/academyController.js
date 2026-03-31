@@ -624,8 +624,24 @@ const updateMemberCtrl = async (req, res, next) => {
       guardianPhone,
       guardianRelation,
     } = req.body;
+    const memberId = req.params.id;
+
+    // Check phone uniqueness (exclude current member)
+    // if (phone) {
+    //   const existingPhone = await Member.findOne({
+    //     phone,
+    //     _id: { $ne: memberId },
+    //   });
+    //   if (existingPhone) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: "رقم الهاتف مسجل مسبقاً",
+    //     });
+    //   }
+    // }
+
     const member = await Member.findByIdAndUpdate(
-      req.params.id,
+      memberId,
       {
         $set: {
           fullName,
@@ -637,7 +653,7 @@ const updateMemberCtrl = async (req, res, next) => {
           guardianRelation,
         },
       },
-      { new: true, runValidators: true },
+      { new: true },
     );
     if (!member) {
       return res
