@@ -483,6 +483,16 @@ export default function SearchSubscriptionsPage() {
                   عرض الملف
                 </button>
               );
+            } else {
+              // No active subscription (expired or none) - show account view button
+              actionButton = (
+                <button
+                  onClick={() => navigate(`/accounts/${result.accountId}`)}
+                  className="w-full py-2.5 rounded-xl bg-gray-600 text-white text-xs sm:text-sm font-semibold hover:bg-gray-700 transition min-h-[44px] flex items-center justify-center"
+                >
+                  عرض الحساب
+                </button>
+              );
             }
 
             return (
