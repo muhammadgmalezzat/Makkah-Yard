@@ -476,6 +476,8 @@ const getMembersDirectory = async (req, res, next) => {
     };
     if (gender && gender !== "all") memberFilter.gender = gender;
     if (q && q.trim()) {
+        memberFilter.role = { $in: ["primary", "partner", "sub_adult"] };
+
       memberFilter.$or = [
         { fullName: { $regex: q.trim(), $options: "i" } },
         { phone: { $regex: q.trim(), $options: "i" } },

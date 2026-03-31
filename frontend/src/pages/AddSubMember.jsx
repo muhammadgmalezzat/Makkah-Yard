@@ -176,20 +176,22 @@ export default function AddSubMember() {
     }
     if (memberType === "sub_child" && selectedPackage && selectedMonths) {
       const numMonths = parseInt(selectedMonths, 10);
+      const pricePerMonth = selectedPackage.pricePerMonth || 0;
       console.log(
         "calculatePrice - months:",
         selectedMonths,
         "parsed:",
         numMonths,
         "pricePerMonth:",
-        selectedPackage.pricePerMonth,
+        pricePerMonth,
       );
       let price;
-      if (numMonths <= 5) {
-        price = selectedPackage.pricePerMonth * numMonths;
+      if (numMonths === 12) {
+        price = pricePerMonth * 10;
+      } else if (numMonths === 6) {
+        price = pricePerMonth * 5;
       } else {
-        // 6+ months gets 5-month price (discount)
-        price = selectedPackage.pricePerMonth * 5;
+        price = pricePerMonth * numMonths;
       }
       console.log("calculatePrice result:", price);
       return price;
