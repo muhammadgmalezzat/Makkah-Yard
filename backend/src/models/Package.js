@@ -25,6 +25,7 @@ const packageSchema = new mongoose.Schema(
         "football",
         "football1",
         "football2",
+        "football3",
         "swimming",
         "combat",
         "mma",
