@@ -17,7 +17,7 @@ async function run() {
       sport: "football3",
       durationMonths: 1,
       price: 0,
-      pricePerMonth: 350,
+      pricePerMonth: 450,
       isFlexibleDuration: true,
       isActive: true,
       createdBy: admin._id,
@@ -48,7 +48,7 @@ async function run() {
       category: "sub_child",
       sport: "football3",
       durationMonths: 12,
-      price: 4500,
+      price: 3500,
       isFlexibleDuration: false,
       isActive: true,
       createdBy: admin._id,
@@ -56,16 +56,19 @@ async function run() {
   ];
 
   for (const pkg of packages) {
-    const existing = await Package.findOne({
-      category: pkg.category,
-      sport: pkg.sport,
-      durationMonths: pkg.durationMonths,
-    });
-    if (existing) {
-      console.log(`⏭️  Already exists: ${pkg.name}`);
-    } else {
-      await Package.create(pkg);
+    const existing = await Package.findOneAndUpdate(
+      {
+        category: pkg.category,
+        sport: pkg.sport,
+        durationMonths: pkg.durationMonths,
+      },
+      pkg,
+      { upsert: true, new: true }
+    );
+    if (existing.isNew) {
       console.log(`✅ Created: ${pkg.name}`);
+    } else {
+      console.log(`✅ Updated: ${pkg.name}`);
     }
   }
 
