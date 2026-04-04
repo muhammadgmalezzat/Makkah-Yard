@@ -26,6 +26,7 @@ connectDB();
 require("./src/models/Sport");
 require("./src/models/AcademyGroup");
 require("./src/models/AcademySubscription");
+require("./src/models/RenewalHistory");
 
 // Security and logging middleware
 app.use(helmet());
