@@ -25,7 +25,6 @@ export default function NewAcademySubscription() {
       fullName: "",
       gender: "",
       dateOfBirth: "",
-      phone: "",
       guardianName: "",
       guardianPhone: "",
     },
@@ -415,7 +414,6 @@ export default function NewAcademySubscription() {
               fullName: childData.fullName,
               gender: childData.gender,
               dateOfBirth: childData.dateOfBirth,
-              phone: childData.phone?.trim() || null,
               guardianName: childData.guardianName?.trim() || null,
               guardianPhone: childData.guardianPhone?.trim() || null,
             },
@@ -704,19 +702,6 @@ export default function NewAcademySubscription() {
                 العمر: {calculatedAge} سنة
               </div>
             )}
-          </div>
-
-          <div>
-            <label className="block text-right font-semibold mb-2">
-              رقم الهاتف (اختياري)
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={childData.phone}
-              onChange={handleChildDataChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-right"
-            />
           </div>
 
           <div>
