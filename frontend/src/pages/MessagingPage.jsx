@@ -14,6 +14,43 @@ const formatManagementMessage = (data) => {
 
   let msg = `${dayName} ${dateStr} اليوم\n\n`;
 
+  // Individual payment lines
+  data.allPaymentsToday.forEach((p) => {
+    const name = p.memberId?.fullName || "-";
+    const role = p.memberId?.role;
+    const roleLabel =
+      role === "partner"
+        ? "(شريك)"
+        : role === "sub_adult"
+          ? "(فرعي)"
+          : role === "child"
+            ? "(طفل)"
+            : "";
+
+    const pkg = p.subscriptionId?.packageId?.name || "أكاديمية";
+    const amount = p.amount?.toLocaleString("ar-SA") || "-";
+
+    const method =
+      {
+        cash: "نقد",
+        network: "شبكة",
+        tabby: "تابي",
+        tamara: "تمارا",
+        transfer: "تحويل",
+      }[p.method] || p.method;
+
+    const type =
+      p.type === "renewal"
+        ? "تجديد"
+        : p.type === "package_change"
+          ? "تغيير باقة"
+          : "جديد";
+
+    msg += `${name} ${roleLabel} | ${pkg} | ${amount} ريال | ${method} | ${type}\n`;
+  });
+
+  msg += `\n`;
+
   // Gym packages
   Object.entries(data.gymByPackage).forEach(([name, count]) => {
     msg += `${count} ${name}\n`;
@@ -62,10 +99,22 @@ const formatAccountingMessage = (data) => {
 
   let msg = `${dayName} ${dateStr}\n`;
 
-  // List all payments with member name, package, method
+  // List all payments with full member details
   data.allPaymentsToday.forEach((p) => {
     const name = p.memberId?.fullName || "-";
+    const role = p.memberId?.role;
+    const roleLabel =
+      role === "partner"
+        ? "(شريك)"
+        : role === "sub_adult"
+          ? "(فرعي)"
+          : role === "child"
+            ? "(طفل)"
+            : "";
+
     const pkg = p.subscriptionId?.packageId?.name || "أكاديمية";
+    const amount = p.amount?.toLocaleString("ar-SA") || "-";
+
     const method =
       {
         cash: "نقد",
@@ -74,8 +123,15 @@ const formatAccountingMessage = (data) => {
         tamara: "تمارا",
         transfer: "تحويل",
       }[p.method] || p.method;
-    const type = p.type === "renewal" ? "تجديد" : "";
-    msg += `${name} ${type} ${pkg} ${method}\n`;
+
+    const type =
+      p.type === "renewal"
+        ? "تجديد"
+        : p.type === "package_change"
+          ? "تغيير باقة"
+          : "جديد";
+
+    msg += `${name} ${roleLabel} | ${pkg} | ${amount} ريال | ${method} | ${type}\n`;
   });
 
   msg += `\n`;

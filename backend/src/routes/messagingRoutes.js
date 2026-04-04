@@ -242,16 +242,20 @@ router.get(
       const Subscription = require("../models/Subscription");
       const AcademySubscription = require("../models/AcademySubscription");
 
-      // 1. Gym payments today
+      // 1. All payments today (with member + package details)
       const gymPayments = await Payment.find({
         paidAt: { $gte: dayStart, $lte: dayEnd },
-      }).populate({
-        path: "subscriptionId",
-        populate: {
-          path: "packageId",
-          select: "name category durationMonths",
-        },
-      });
+      })
+        .populate("memberId", "fullName role")
+        .populate({
+          path: "subscriptionId",
+          populate: {
+            path: "packageId",
+            select: "name category durationMonths price",
+          },
+        })
+        .sort({ paidAt: 1 })
+        .lean();
 
       // 2. Academy payments today
       const academyPayments = await Payment.find({
@@ -326,10 +330,7 @@ router.get(
           newTotal,
           dayTotal,
           monthlyTotal,
-          allPaymentsToday: gymPayments.map((p) => ({
-            ...p.toObject(),
-            memberId: p.memberId || { fullName: "-" },
-          })),
+          allPaymentsToday: gymPayments,
         },
       });
     } catch (error) {
