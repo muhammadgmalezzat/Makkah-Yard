@@ -359,6 +359,8 @@ const renewSubscription = async ({
   subscriptionId,
   packageData,
   paymentData,
+  months,
+  pricePaidOverride,
   userId,
 }) => {
   try {
@@ -371,17 +373,22 @@ const renewSubscription = async ({
     // Store before state
     const before = subscription.toObject();
 
-    // Calculate new dates
+    // Calculate new dates — use months override if provided (duration-based renewal)
+    const durationMonths = months || packageData.durationMonths;
+    const price = pricePaidOverride !== null && pricePaidOverride !== undefined
+      ? pricePaidOverride
+      : packageData.price;
+
     const startDate = new Date(paymentData.startDate);
     const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + packageData.durationMonths);
+    endDate.setMonth(endDate.getMonth() + durationMonths);
 
     // Update subscription
     subscription.status = "renewed";
     subscription.startDate = startDate;
     subscription.endDate = endDate;
     subscription.packageId = packageData._id;
-    subscription.pricePaid = packageData.price;
+    subscription.pricePaid = price;
     subscription.renewalCount += 1;
     subscription.freezeCount = 0;
     subscription.isFrozen = false;
@@ -394,7 +401,7 @@ const renewSubscription = async ({
     const payment = new Payment({
       subscriptionId: subscription._id,
       memberId: subscription.memberId,
-      amount: packageData.price,
+      amount: price,
       method: paymentData.method,
       type: "renewal",
       paidAt: new Date(paymentData.paidAt || new Date()),

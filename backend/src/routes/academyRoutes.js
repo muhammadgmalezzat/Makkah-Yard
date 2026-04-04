@@ -17,6 +17,8 @@ const {
   updateGroup,
   updateMemberCtrl,
   updateSubscriptionCtrl,
+  getAcademySubscription,
+  renewAcademySubscription,
 } = require("../controllers/academyController");
 
 // ============ SPORTS ENDPOINTS ============
@@ -334,6 +336,17 @@ router.put(
   protect,
   allowRoles("admin", "owner", "reception", "supervisor"),
   updateSubscriptionCtrl,
+);
+
+// GET /api/academy/subscriptions/:subId - get single subscription
+router.get("/subscriptions/:subId", protect, getAcademySubscription);
+
+// POST /api/academy/subscriptions/:subId/renew - renew subscription
+router.post(
+  "/subscriptions/:subId/renew",
+  protect,
+  allowRoles("admin", "owner", "reception"),
+  renewAcademySubscription,
 );
 
 module.exports = router;

@@ -23,7 +23,7 @@ const paymentSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["new", "renewal", "transfer_fee", "upgrade_diff"],
+      enum: ["new", "renewal", "transfer_fee", "upgrade_diff", "package_change"],
       default: "new",
     },
     receiptPhoto: {

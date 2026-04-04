@@ -9,6 +9,8 @@ import PackagesPage from "./pages/PackagesPage";
 import NewSubscriptionPage from "./pages/NewSubscriptionPage";
 import SearchSubscriptionsPage from "./pages/SearchSubscriptionsPage";
 import RenewSubscriptionPage from "./pages/RenewSubscriptionPage";
+import RenewPage from "./pages/RenewPage";
+import ChangePackagePage from "./pages/ChangePackagePage";
 import AccountProfile from "./pages/AccountProfile";
 import AddSubMember from "./pages/AddSubMember";
 import MessagingPage from "./pages/MessagingPage";
@@ -19,6 +21,7 @@ import ChildProfile from "./pages/academy/ChildProfile";
 import ExpiringSubscriptions from "./pages/academy/ExpiringSubscriptions";
 import CoachList from "./pages/academy/CoachList";
 import AcademyDashboard from "./pages/academy/AcademyDashboard";
+import RenewAcademySubscription from "./pages/academy/RenewAcademySubscription";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +59,14 @@ function App() {
               path="/subscriptions/:subscriptionId/renew"
               element={<RenewSubscriptionPage />}
             />
+            <Route
+              path="/renew/:subscriptionId"
+              element={<RenewPage />}
+            />
+            <Route
+              path="/change-package/:accountId"
+              element={<ChangePackagePage />}
+            />
             <Route path="/academy/dashboard" element={<AcademyDashboard />} />
             <Route path="/academy/sports" element={<SportsManagement />} />
             <Route path="/academy/groups" element={<GroupsManagement />} />
@@ -73,6 +84,10 @@ function App() {
               element={<ExpiringSubscriptions />}
             />
             <Route path="/academy/coach-list" element={<CoachList />} />
+            <Route
+              path="/academy/renew-subscription/:subscriptionId"
+              element={<RenewAcademySubscription />}
+            />
             <Route path="/messaging" element={<MessagingPage />} />
           </Route>
 
