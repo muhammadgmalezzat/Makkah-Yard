@@ -24,7 +24,6 @@ export default function ChildProfile() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     fullName: "",
-    phone: "",
     gender: "male",
     dateOfBirth: "",
     guardianName: "",
@@ -60,7 +59,6 @@ export default function ChildProfile() {
     if (profile?.member) {
       setEditForm({
         fullName: profile.member.fullName || "",
-        phone: profile.member.phone || "",
         gender: profile.member.gender || "male",
         dateOfBirth: profile.member.dateOfBirth
           ? new Date(profile.member.dateOfBirth).toISOString().split("T")[0]
@@ -834,22 +832,6 @@ export default function ChildProfile() {
                       setEditForm({ ...editForm, fullName: e.target.value })
                     }
                     className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    رقم الهاتف
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.phone}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, phone: e.target.value })
-                    }
-                    className="w-full border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="05xxxxxxxx"
                   />
                 </div>
 

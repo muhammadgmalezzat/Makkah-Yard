@@ -618,40 +618,26 @@ const updateMemberCtrl = async (req, res, next) => {
   try {
     const {
       fullName,
-      phone,
       gender,
       dateOfBirth,
       guardianName,
       guardianPhone,
       guardianRelation,
+      // phone intentionally excluded — children don't have their own phone numbers
     } = req.body;
     const memberId = req.params.id;
-
-    // Check phone uniqueness (exclude current member)
-    // if (phone) {
-    //   const existingPhone = await Member.findOne({
-    //     phone,
-    //     _id: { $ne: memberId },
-    //   });
-    //   if (existingPhone) {
-    //     return res.status(400).json({
-    //       success: false,
-    //       message: "رقم الهاتف مسجل مسبقاً",
-    //     });
-    //   }
-    // }
 
     const member = await Member.findByIdAndUpdate(
       memberId,
       {
         $set: {
           fullName,
-          phone,
           gender,
           dateOfBirth,
           guardianName,
           guardianPhone,
           guardianRelation,
+          phone: '',
         },
       },
       { new: true },
