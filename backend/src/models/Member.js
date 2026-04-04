@@ -62,6 +62,19 @@ const memberSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    },
+    archivedAt: {
+      type: Date,
+      default: null,
+    },
+    archivedReason: {
+      type: String,
+      default: null,
+    },
   },
   { timestamps: true },
 );

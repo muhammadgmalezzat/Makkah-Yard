@@ -117,7 +117,14 @@ const createSubscription = async (req, res, next) => {
 const renewSubscriptionCtrl = async (req, res, next) => {
   try {
     const { subscriptionId } = req.params;
-    const { packageId, startDate, paymentMethod, paymentDate } = req.body;
+    const { packageId, startDate, paymentMethod, paymentDate, months, pricePaid } = req.body;
+
+    // Capture old state before renewal for RenewalHistory
+    const oldSub = await Subscription.findById(subscriptionId);
+    if (!oldSub) {
+      return res.status(404).json({ message: "الاشتراك غير موجود" });
+    }
+    const oldEndDate = oldSub.endDate;
 
     // Validate package exists
     const pkg = await Package.findById(packageId);
@@ -134,7 +141,29 @@ const renewSubscriptionCtrl = async (req, res, next) => {
         method: paymentMethod,
         paidAt: paymentDate,
       },
+      months: months || null,
+      pricePaidOverride: pricePaid !== undefined ? pricePaid : null,
       userId: req.user._id,
+    });
+
+    // Record renewal history
+    const RenewalHistory = require("../models/RenewalHistory");
+    const durationUsed = months || pkg.durationMonths;
+    const amountPaid = pricePaid !== undefined ? pricePaid : pkg.price;
+
+    await RenewalHistory.create({
+      accountId: result.subscription.accountId,
+      type: "renewal",
+      previousPackageId: oldSub.packageId,
+      newPackageId: pkg._id,
+      previousEndDate: oldEndDate,
+      newStartDate: new Date(startDate),
+      newEndDate: result.subscription.endDate,
+      durationMonths: durationUsed,
+      pricePaid: amountPaid,
+      paymentMethod: paymentMethod || "cash",
+      affectedMembers: [],
+      createdBy: req.user._id,
     });
 
     res.json({
@@ -164,6 +193,7 @@ const searchSubscriptions = async (req, res, next) => {
         { phone: { $regex: q.trim(), $options: "i" } },
       ],
       isActive: true,
+      status: "active",
     }).limit(20);
 
     console.log("Members found:", members.length);
@@ -351,12 +381,16 @@ const getAccountProfile = async (req, res, next) => {
         .json({ success: false, message: "الحساب غير موجود" });
     }
 
-    // Get ALL members in this account
-    const members = await Member.find({ accountId }).sort({ role: 1 });
+    // Get ALL members, split into active and inactive
+    const allMembers = await Member.find({ accountId })
+      .sort({ role: 1 })
+      .lean();
+    const activeMembers = allMembers.filter((m) => m.status !== "inactive");
+    const inactiveMembers = allMembers.filter((m) => m.status === "inactive");
 
-    // Get subscriptions for each member
+    // Get subscriptions for active members only
     const membersWithSubs = await Promise.all(
-      members.map(async (member) => {
+      activeMembers.map(async (member) => {
         const gymSub = await Subscription.findOne({ memberId: member._id })
           .sort({ createdAt: -1 })
           .populate("packageId", "name category durationMonths price");
@@ -377,12 +411,12 @@ const getAccountProfile = async (req, res, next) => {
     );
 
     // Get total payments for this account (excluding partner members)
-    const memberIds = members.map((m) => m._id);
+    const memberIds = activeMembers.map((m) => m._id);
     const payments = await Payment.find({ memberId: { $in: memberIds } })
       .sort({ createdAt: -1 })
       .populate("createdBy", "name");
 
-    const partnerIds = members
+    const partnerIds = activeMembers
       .filter((m) => m.role === "partner")
       .map((m) => m._id.toString());
 
@@ -397,7 +431,7 @@ const getAccountProfile = async (req, res, next) => {
     );
 
     // Get primary member's active subscription
-    const primaryMember = members.find((m) => m.role === "primary");
+    const primaryMember = activeMembers.find((m) => m.role === "primary");
     const primarySub = primaryMember
       ? await Subscription.findOne({
           memberId: primaryMember._id,
@@ -411,11 +445,12 @@ const getAccountProfile = async (req, res, next) => {
         account,
         primarySubscription: primarySub,
         members: membersWithSubs,
+        inactiveMembers,
         payments: relevantPayments,
         totalPaid,
         stats: {
-          totalMembers: members.length,
-          activeMembers: members.filter((m) => m.isActive).length,
+          totalMembers: activeMembers.length,
+          activeMembers: activeMembers.filter((m) => m.isActive).length,
           totalPayments: relevantPayments.length,
           totalPaid,
           lastPaymentDate: relevantPayments[0]?.paidAt || null,
@@ -472,6 +507,7 @@ const getMembersDirectory = async (req, res, next) => {
     let memberFilter = {
       // role: "primary",
       isActive: true,
+      status: "active",
       accountId: { $in: filteredAccounts },
     };
     if (gender && gender !== "all") memberFilter.gender = gender;
@@ -515,6 +551,7 @@ const getMembersDirectory = async (req, res, next) => {
       let childFilter = {
         role: "child",
         isActive: true,
+        status: "active",
         accountId: { $in: academyAccountIds },
       };
       if (gender && gender !== "all") childFilter.gender = gender;
@@ -813,13 +850,15 @@ const getClubDashboard = async (req, res, next) => {
     });
 
     // ── Total Active Members ──
-    const totalActiveMembers = await Member.countDocuments({ isActive: true });
+    const totalActiveMembers = await Member.countDocuments({ isActive: true, status: "active" });
     const activeMaleMembers = await Member.countDocuments({
       isActive: true,
+      status: "active",
       gender: "male",
     });
     const activeFemaleMembers = await Member.countDocuments({
       isActive: true,
+      status: "active",
       gender: "female",
     });
 
@@ -1009,6 +1048,180 @@ const getClubDashboard = async (req, res, next) => {
   }
 };
 
+const changePackage = async (req, res, next) => {
+  try {
+    const {
+      accountId,
+      newPackageId,
+      startDate,
+      endDate,
+      durationMonths,
+      pricePaid,
+      paymentMethod,
+      partnerData,
+    } = req.body;
+
+    const RenewalHistory = require("../models/RenewalHistory");
+
+    const account = await Account.findById(accountId);
+    if (!account) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الحساب غير موجود" });
+    }
+
+    const currentMembers = await Member.find({ accountId, status: "active" });
+    const primaryMember = currentMembers.find((m) => m.role === "primary");
+    if (!primaryMember) {
+      return res
+        .status(400)
+        .json({ success: false, message: "لم يتم العثور على العضو الأساسي" });
+    }
+
+    const currentSub = await Subscription.findOne({
+      memberId: primaryMember._id,
+      status: { $in: ["active", "expired"] },
+    })
+      .sort({ createdAt: -1 })
+      .populate("packageId");
+
+    if (!currentSub) {
+      return res
+        .status(400)
+        .json({ success: false, message: "لم يتم العثور على اشتراك للحساب" });
+    }
+
+    const newPackage = await Package.findById(newPackageId);
+    if (!newPackage) {
+      return res
+        .status(404)
+        .json({ success: false, message: "الباقة غير موجودة" });
+    }
+
+    const affectedMembers = [];
+    const oldType = account.type;
+    const newType =
+      newPackage.category === "individual"
+        ? "individual"
+        : newPackage.category === "friends"
+          ? "friends"
+          : newPackage.category === "family_essential"
+            ? "family"
+            : oldType;
+
+    const nonPrimaryActive = currentMembers.filter(
+      (m) => m.role !== "primary",
+    );
+    const scenariosRequiringArchive = [
+      "family→individual",
+      "family→friends",
+      "friends→individual",
+      "friends→family",
+    ];
+    const scenario = `${oldType}→${newType}`;
+
+    if (scenariosRequiringArchive.includes(scenario)) {
+      for (const member of nonPrimaryActive) {
+        await Member.findByIdAndUpdate(member._id, {
+          status: "inactive",
+          archivedAt: new Date(),
+          archivedReason: "package_change",
+        });
+        await Subscription.updateMany(
+          { memberId: member._id, status: "active" },
+          { status: "expired" },
+        );
+        affectedMembers.push({
+          memberId: member._id,
+          fullName: member.fullName,
+          role: member.role,
+          action: "archived",
+        });
+      }
+    }
+
+    await Account.findByIdAndUpdate(accountId, { type: newType });
+
+    const oldEndDate = currentSub.endDate;
+    await Subscription.findByIdAndUpdate(currentSub._id, {
+      packageId: newPackageId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      pricePaid,
+      status: "active",
+    });
+
+    if (partnerData && partnerData.fullName) {
+      const newPartner = await Member.create({
+        accountId,
+        role: "partner",
+        fullName: partnerData.fullName,
+        phone: partnerData.phone || undefined,
+        gender: partnerData.gender || "male",
+        status: "active",
+      });
+      affectedMembers.push({
+        memberId: newPartner._id,
+        fullName: newPartner.fullName,
+        role: "partner",
+        action: "added",
+      });
+    }
+
+    affectedMembers.push({
+      memberId: primaryMember._id,
+      fullName: primaryMember.fullName,
+      role: "primary",
+      action: "kept",
+    });
+
+    await Payment.create({
+      subscriptionId: currentSub._id,
+      memberId: primaryMember._id,
+      amount: pricePaid,
+      method: paymentMethod || "cash",
+      type: "package_change",
+      paidAt: new Date(startDate),
+      createdBy: req.user._id,
+    });
+
+    const upgradeScenarios = [
+      "individual→family",
+      "individual→friends",
+      "friends→family",
+    ];
+    const historyType =
+      oldType === newType
+        ? "renewal"
+        : upgradeScenarios.includes(scenario)
+          ? "upgrade"
+          : "downgrade";
+
+    await RenewalHistory.create({
+      accountId,
+      type: historyType,
+      previousPackageId: currentSub.packageId._id,
+      newPackageId,
+      previousEndDate: oldEndDate,
+      newStartDate: new Date(startDate),
+      newEndDate: new Date(endDate),
+      durationMonths,
+      pricePaid,
+      paymentMethod: paymentMethod || "cash",
+      affectedMembers,
+      createdBy: req.user._id,
+    });
+
+    res.json({
+      success: true,
+      message: "تم تغيير الباقة بنجاح",
+      data: { accountId, newType, affectedMembers },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscription,
   renewSubscriptionCtrl,
@@ -1022,4 +1235,5 @@ module.exports = {
   deleteMember,
   deleteAccount,
   getClubDashboard,
+  changePackage,
 };

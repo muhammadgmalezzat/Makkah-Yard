@@ -37,6 +37,7 @@ const typeConfig = {
   renewal: "تجديد",
   transfer_fee: "رسم نقل",
   upgrade_diff: "فرق ترقية",
+  package_change: "تغيير باقة",
 };
 
 function calculateAge(dateOfBirth) {
@@ -178,7 +179,7 @@ export default function AccountProfile() {
     );
   }
 
-  const { account, primarySubscription, members, payments, totalPaid, stats } =
+  const { account, primarySubscription, members, inactiveMembers, payments, totalPaid, stats } =
     profileData;
   const accountType = accountTypeConfig[account.type] || {
     label: account.type,
@@ -231,8 +232,19 @@ export default function AccountProfile() {
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {isSubscriptionActive && (
                 <>
-                  <button className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition min-h-[44px]">
-                    تجديد
+                  {account.type === 'academy_only' && (
+                    <button
+                      onClick={() => navigate(`/renew/${primarySub._id}`)}
+                      className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition min-h-[44px]"
+                    >
+                      تجديد
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate(`/change-package/${account._id}`)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition min-h-[44px]"
+                  >
+                    تغيير الباقة
                   </button>
                   <button className="px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition min-h-[44px]">
                     تجميد
@@ -518,6 +530,37 @@ export default function AccountProfile() {
           </div>
         )}
       </div>
+
+      {/* SECTION 2b: Inactive / Archived Members */}
+      {inactiveMembers?.length > 0 && (
+        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-5">
+          <h3 className="font-bold text-gray-700 mb-4">👤 أعضاء سابقون</h3>
+          <div className="space-y-1">
+            {inactiveMembers.map((member) => (
+              <div
+                key={member._id}
+                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+              >
+                <div>
+                  <p className="font-medium text-gray-700 text-sm">{member.fullName}</p>
+                  <p className="text-xs text-gray-400">
+                    {member.role === "partner"
+                      ? "شريك"
+                      : member.role === "sub_adult"
+                        ? "فرعي"
+                        : "طفل"}
+                    {member.archivedAt &&
+                      ` · انتهى ${new Date(member.archivedAt).toLocaleDateString("ar-SA")}`}
+                  </p>
+                </div>
+                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+                  غير نشط
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Member Edit Modal */}
       {editingMember && (

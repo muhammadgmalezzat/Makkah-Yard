@@ -12,6 +12,7 @@ const {
   deleteMember,
   deleteAccount,
   getClubDashboard,
+  changePackage,
 } = require("../controllers/subscriptionController");
 const { protect, allowRoles } = require("../middleware/auth");
 
@@ -50,6 +51,14 @@ router.post(
   protect,
   allowRoles("reception", "supervisor", "admin", "owner"),
   addSubMemberHandler,
+);
+
+// Change package (upgrade / downgrade / cross-type)
+router.post(
+  "/change-package",
+  protect,
+  allowRoles("reception", "supervisor", "admin", "owner"),
+  changePackage,
 );
 
 // Get account profile

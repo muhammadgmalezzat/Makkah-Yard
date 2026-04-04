@@ -578,6 +578,12 @@ export default function ChildProfile() {
                         >
                           تغيير مجموعة
                         </button>
+                        <button
+                          onClick={() => navigate(`/academy/renew-subscription/${sub._id}`)}
+                          className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition border border-green-200"
+                        >
+                          🔄 تجديد
+                        </button>
                       </>
                     ) : null}
                     <button

@@ -468,6 +468,7 @@ const dashboardCtrl = async (req, res, next) => {
 
     // 3. Count by gender
     const byGenderRaw = await Member.aggregate([
+      { $match: { status: "active" } },
       {
         $group: {
           _id: "$gender",
@@ -704,6 +705,83 @@ const updateSubscriptionCtrl = async (req, res, next) => {
   }
 };
 
+// GET /api/academy/subscriptions/:subId - get single academy subscription
+const getAcademySubscription = async (req, res, next) => {
+  try {
+    const sub = await AcademySubscription.findById(req.params.subId)
+      .populate('sportId', 'name nameEn')
+      .populate('groupId', 'name')
+      .populate('memberId', 'fullName gender');
+    if (!sub) return res.status(404).json({ success: false, message: 'غير موجود' });
+    res.json({ success: true, data: sub });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/academy/subscriptions/:subId/renew - renew academy subscription
+const renewAcademySubscription = async (req, res, next) => {
+  try {
+    const { subId } = req.params;
+
+    const Payment = require('../models/Payment');
+
+    const sub = await AcademySubscription.findById(subId)
+      .populate('sportId', 'name nameEn')
+      .populate('groupId', 'name')
+      .populate('memberId', 'fullName accountId');
+
+    if (!sub) {
+      return res.status(404).json({ success: false, message: 'الاشتراك غير موجود' });
+    }
+
+    const { months, amount, paymentMethod, startDate } = req.body;
+    const renewStart = startDate ? new Date(startDate) : new Date(sub.endDate);
+    const newEndDate = new Date(renewStart);
+    newEndDate.setMonth(newEndDate.getMonth() + parseInt(months));
+
+    await AcademySubscription.findByIdAndUpdate(subId, {
+      endDate: newEndDate,
+      status: 'active',
+    });
+
+    await Payment.create({
+      subscriptionId: sub._id,
+      memberId: sub.memberId._id,
+      amount: parseFloat(amount),
+      method: paymentMethod,
+      type: 'renewal',
+      paidAt: new Date(),
+      createdBy: req.user._id,
+    });
+
+    const RenewalHistory = require('../models/RenewalHistory');
+    await RenewalHistory.create({
+      accountId: sub.memberId.accountId,
+      type: "renewal",
+      previousEndDate: sub.endDate,
+      newStartDate: renewStart,
+      newEndDate,
+      durationMonths: parseInt(months),
+      pricePaid: parseFloat(amount),
+      paymentMethod,
+      affectedMembers: [
+        {
+          memberId: sub.memberId._id,
+          fullName: sub.memberId.fullName,
+          role: "child",
+          action: "kept",
+        },
+      ],
+      createdBy: req.user._id,
+    });
+
+    res.json({ success: true, message: 'تم تجديد الاشتراك بنجاح' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubscriptionCtrl,
   listSubscriptionsCtrl,
@@ -717,4 +795,6 @@ module.exports = {
   updateGroup,
   updateMemberCtrl,
   updateSubscriptionCtrl,
+  getAcademySubscription,
+  renewAcademySubscription,
 };
