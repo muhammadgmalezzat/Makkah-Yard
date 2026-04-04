@@ -240,17 +240,17 @@ export default function AccountProfile() {
                       تجديد
                     </button>
                   )}
-                  <button
-                    onClick={() => navigate(`/change-package/${account._id}`)}
-                    className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition min-h-[44px]"
-                  >
-                    تغيير الباقة
-                  </button>
                   <button className="px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition min-h-[44px]">
                     تجميد
                   </button>
                 </>
               )}
+              <button
+                onClick={() => navigate(`/change-package/${account._id}`)}
+                className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition min-h-[44px]"
+              >
+                تغيير الباقة
+              </button>
               <button
                 onClick={() => {}}
                 className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition min-h-[44px]"
