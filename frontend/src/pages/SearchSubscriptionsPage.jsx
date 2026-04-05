@@ -53,36 +53,46 @@ export default function SearchSubscriptionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
-    title: '',
-    message: '',
-    confirmText: 'تأكيد',
-    cancelText: 'إلغاء',
-    confirmVariant: 'danger',
+    title: "",
+    message: "",
+    confirmText: "تأكيد",
+    cancelText: "إلغاء",
+    confirmVariant: "danger",
     onConfirm: null,
   });
   const [alertModal, setAlertModal] = useState({
     isOpen: false,
-    title: '',
-    message: '',
-    type: 'success',
+    title: "",
+    message: "",
+    type: "success",
   });
 
-  const showConfirm = (title, message, onConfirm, confirmVariant = 'danger') => {
+  const showConfirm = (
+    title,
+    message,
+    onConfirm,
+    confirmVariant = "danger",
+  ) => {
     setConfirmModal({
       isOpen: true,
       title,
       message,
-      confirmText: 'تأكيد',
-      cancelText: 'إلغاء',
+      confirmText: "تأكيد",
+      cancelText: "إلغاء",
       confirmVariant,
       onConfirm,
     });
   };
 
-  const showAlert = (message, type = 'success') => {
+  const showAlert = (message, type = "success") => {
     setAlertModal({
       isOpen: true,
-      title: type === 'success' ? '✅ تم بنجاح' : type === 'error' ? '❌ خطأ' : '⚠️ تنبيه',
+      title:
+        type === "success"
+          ? "✅ تم بنجاح"
+          : type === "error"
+            ? "❌ خطأ"
+            : "⚠️ تنبيه",
       message,
       type,
     });
@@ -158,23 +168,26 @@ export default function SearchSubscriptionsPage() {
 
   const handleDelete = (memberId, memberRole, memberName) => {
     showConfirm(
-      memberRole === 'primary' ? 'حذف الحساب' : 'حذف العضو',
-      memberRole === 'primary'
+      memberRole === "primary" ? "حذف الحساب" : "حذف العضو",
+      memberRole === "primary"
         ? `سيتم حذف حساب "${memberName}" وجميع أعضائه وبياناتهم نهائياً. هل أنت متأكد؟`
         : `سيتم حذف العضو "${memberName}" فقط دون التأثير على باقي الحساب. هل أنت متأكد؟`,
       async () => {
         try {
           setDeletingId(memberId);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
           await axios.delete(`/subscriptions/members/${memberId}`);
           await refetch();
-          showAlert('تم الحذف بنجاح', 'success');
+          showAlert("تم الحذف بنجاح", "success");
         } catch (error) {
-          showAlert(error.response?.data?.message || 'حدث خطأ أثناء الحذف', 'error');
+          showAlert(
+            error.response?.data?.message || "حدث خطأ أثناء الحذف",
+            "error",
+          );
         } finally {
           setDeletingId(null);
         }
-      }
+      },
     );
   };
 
@@ -479,8 +492,16 @@ export default function SearchSubscriptionsPage() {
               );
             } else if (hasAcademySubs) {
               // Academy subscription
-              primarybadgeLabel = "أكاديمية";
-              primaryBadgeColor = "bg-purple-100 text-purple-700";
+              const accountType = result.account?.type;
+              const isLinkedChild =
+                accountType === "family" ||
+                accountType === "friends" ||
+                accountType === "individual";
+
+              primarybadgeLabel = isLinkedChild ? "ابن مشترك" : "أكاديمية";
+              primaryBadgeColor = isLinkedChild
+                ? "bg-orange-100 text-orange-700"
+                : "bg-purple-100 text-purple-700";
               const firstAcademy = result.academySubscriptions[0];
               const sportName = firstAcademy?.sportId?.name || "رياضة";
               const groupName = firstAcademy?.groupId?.name || "مجموعة";
