@@ -393,7 +393,7 @@ const activeTodayCtrl = async (req, res, next) => {
     const query = {
       sportId,
       status: "active",
-      startDate: { $lte: today },
+      startDate: { $lte: tomorrow },
       endDate: { $gte: today },
     };
 
