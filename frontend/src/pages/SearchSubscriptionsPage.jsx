@@ -51,6 +51,8 @@ export default function SearchSubscriptionsPage() {
   const [gender, setGender] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [futureOnly, setFutureOnly] = useState(false);
+
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: "",
@@ -122,7 +124,7 @@ export default function SearchSubscriptionsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [packageType, debouncedSearch, startDate, endDate, activeOnly, gender]);
+  }, [packageType, debouncedSearch, startDate, endDate, activeOnly, gender, futureOnly]);
 
   const { isLoading, refetch } = useQuery({
     queryKey: [
@@ -134,12 +136,14 @@ export default function SearchSubscriptionsPage() {
       activeOnly,
       gender,
       currentPage,
+      futureOnly,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (debouncedSearch) params.append("q", debouncedSearch);
       params.append("packageType", packageType);
       if (startDate) params.append("startDate", startDate);
+      if (futureOnly) params.append("futureOnly", "true");
       if (endDate) params.append("endDate", endDate);
       if (activeOnly) params.append("activeOnly", "true");
       if (gender !== "all") params.append("gender", gender);
@@ -329,6 +333,26 @@ export default function SearchSubscriptionsPage() {
               className="w-5 h-5 rounded border-gray-300 text-blue-600 cursor-pointer"
             />
             <span className="text-sm font-medium text-gray-700">نشط فقط</span>
+          </label>
+        </div>
+        {/* Future Subscriptions Filter */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+          <label className="flex items-center gap-3 cursor-pointer min-h-[44px] flex items-center">
+            <input
+              type="checkbox"
+              checked={futureOnly}
+              onChange={(e) => {
+                setFutureOnly(e.target.checked);
+                if (e.target.checked) {
+                  setActiveOnly(false);
+                  setNoSubOnly(false);
+                }
+              }}
+              className="w-5 h-5 rounded border-gray-300 text-purple-600 cursor-pointer"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              اشتراكات مستقبلية
+            </span>
           </label>
         </div>
       </div>
