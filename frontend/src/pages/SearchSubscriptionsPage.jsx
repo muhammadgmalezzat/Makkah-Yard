@@ -754,5 +754,6 @@ export default function SearchSubscriptionsPage() {
         </div>
       )}
     </div>
+  </div>
   );
 }
