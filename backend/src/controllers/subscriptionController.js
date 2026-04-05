@@ -492,6 +492,7 @@ const getMembersDirectory = async (req, res, next) => {
       noSubOnly, // true/false
       gender, // male, female, all
       limit = 500, // high default to get all results, frontend handles pagination
+      futureOnly,
     } = req.query;
 
     console.log("packageType filter:", packageType);
@@ -501,6 +502,7 @@ const getMembersDirectory = async (req, res, next) => {
     if (packageType && packageType !== "all") {
       accountFilter.type = packageType;
     }
+
     const filteredAccounts = await Account.find(accountFilter).distinct("_id");
     console.log("filteredAccounts count:", filteredAccounts.length);
 
@@ -511,6 +513,7 @@ const getMembersDirectory = async (req, res, next) => {
       status: "active",
       accountId: { $in: filteredAccounts },
     };
+    
     if (gender && gender !== "all") memberFilter.gender = gender;
     if (q && q.trim()) {
       memberFilter.role = {
@@ -626,6 +629,15 @@ const getMembersDirectory = async (req, res, next) => {
         const hasActiveAcademy = academySubs.some((s) => s.status === "active");
         if (!hasActiveGym && !hasActiveAcademy) continue;
       }
+      if (futureOnly === "true") {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(0, 0, 0, 0)
+  
+  const hasFutureGym = gymSub && new Date(gymSub.startDate) >= tomorrow
+  const hasFutureAcademy = academySubs.some(s => new Date(s.startDate) >= tomorrow)
+  if (!hasFutureGym && !hasFutureAcademy) continue
+}
 
       // Apply noSubOnly filter
       if (noSubOnly === "true") {
