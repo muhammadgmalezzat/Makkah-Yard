@@ -489,6 +489,7 @@ const getMembersDirectory = async (req, res, next) => {
       startDate, // filter by subscription start date
       endDate, // filter by subscription end date
       activeOnly, // true/false
+      noSubOnly, // true/false
       gender, // male, female, all
       limit = 500, // high default to get all results, frontend handles pagination
       futureOnly,
@@ -637,6 +638,13 @@ const getMembersDirectory = async (req, res, next) => {
   const hasFutureAcademy = academySubs.some(s => new Date(s.startDate) >= tomorrow)
   if (!hasFutureGym && !hasFutureAcademy) continue
 }
+
+      // Apply noSubOnly filter
+      if (noSubOnly === "true") {
+        const hasGymSub = gymSub !== null;
+        const hasAcademySub = academySubs.length > 0;
+        if (hasGymSub || hasAcademySub) continue;
+      }
 
       // Apply date range filter on gym subscription
       if (gymSub && startDate) {

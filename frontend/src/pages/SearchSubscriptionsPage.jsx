@@ -48,6 +48,7 @@ export default function SearchSubscriptionsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeOnly, setActiveOnly] = useState(false);
+  const [noSubOnly, setNoSubOnly] = useState(false);
   const [gender, setGender] = useState("all");
   const [deletingId, setDeletingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +125,9 @@ export default function SearchSubscriptionsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [packageType, debouncedSearch, startDate, endDate, activeOnly, gender, futureOnly]);
+
+  }, [packageType, debouncedSearch, startDate, endDate, activeOnly, gender, futureOnly,noSubOnly]);
+
 
   const { isLoading, refetch } = useQuery({
     queryKey: [
@@ -134,6 +137,7 @@ export default function SearchSubscriptionsPage() {
       startDate,
       endDate,
       activeOnly,
+      noSubOnly,
       gender,
       currentPage,
       futureOnly,
@@ -146,6 +150,7 @@ export default function SearchSubscriptionsPage() {
       if (futureOnly) params.append("futureOnly", "true");
       if (endDate) params.append("endDate", endDate);
       if (activeOnly) params.append("activeOnly", "true");
+      if (noSubOnly) params.append("noSubOnly", "true");
       if (gender !== "all") params.append("gender", gender);
       params.append("page", currentPage.toString());
       params.append("limit", "50");
@@ -202,6 +207,7 @@ export default function SearchSubscriptionsPage() {
     startDate,
     endDate,
     activeOnly,
+    noSubOnly,
     gender !== "all",
     debouncedSearch,
   ].filter(Boolean).length;
@@ -329,33 +335,54 @@ export default function SearchSubscriptionsPage() {
             <input
               type="checkbox"
               checked={activeOnly}
-              onChange={(e) => setActiveOnly(e.target.checked)}
+              onChange={(e) => {
+                setActiveOnly(e.target.checked);
+                if (e.target.checked) setNoSubOnly(false);
+              }}
               className="w-5 h-5 rounded border-gray-300 text-blue-600 cursor-pointer"
             />
             <span className="text-sm font-medium text-gray-700">نشط فقط</span>
           </label>
         </div>
-        {/* Future Subscriptions Filter */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-          <label className="flex items-center gap-3 cursor-pointer min-h-[44px] flex items-center">
-            <input
-              type="checkbox"
-              checked={futureOnly}
-              onChange={(e) => {
-                setFutureOnly(e.target.checked);
-                if (e.target.checked) {
-                  setActiveOnly(false);
-                  setNoSubOnly(false);
-                }
-              }}
-              className="w-5 h-5 rounded border-gray-300 text-purple-600 cursor-pointer"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              اشتراكات مستقبلية
-            </span>
-          </label>
-        </div>
-      </div>
+
+
+     {/* No Subscription Filter */}
+<div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+  <label className="flex items-center gap-3 cursor-pointer min-h-[44px] flex items-center">
+    <input
+      type="checkbox"
+      checked={noSubOnly}
+      onChange={(e) => {
+        setNoSubOnly(e.target.checked)
+        if (e.target.checked) {
+          setActiveOnly(false)
+          setFutureOnly(false)
+        }
+      }}
+      className="w-5 h-5 rounded border-gray-300 text-orange-600 cursor-pointer"
+    />
+    <span className="text-sm font-medium text-gray-700">بدون اشتراك فقط</span>
+  </label>
+</div>
+
+{/* Future Subscriptions Filter */}
+<div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+  <label className="flex items-center gap-3 cursor-pointer min-h-[44px] flex items-center">
+    <input
+      type="checkbox"
+      checked={futureOnly}
+      onChange={(e) => {
+        setFutureOnly(e.target.checked)
+        if (e.target.checked) {
+          setActiveOnly(false)
+          setNoSubOnly(false)
+        }
+      }}
+      className="w-5 h-5 rounded border-gray-300 text-purple-600 cursor-pointer"
+    />
+    <span className="text-sm font-medium text-gray-700">اشتراكات مستقبلية</span>
+  </label>
+</div>
 
       {/* Active Filters Display */}
       {activeFiltersCount > 0 && (
@@ -370,6 +397,8 @@ export default function SearchSubscriptionsPage() {
               setStartDate("");
               setEndDate("");
               setActiveOnly(false);
+              setNoSubOnly(false);
+              setFutureOnly(false);
               setGender("all");
               setCurrentPage(1);
             }}
