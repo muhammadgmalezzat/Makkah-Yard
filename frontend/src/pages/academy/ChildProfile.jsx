@@ -271,6 +271,16 @@ export default function ChildProfile() {
 
   // Handle add sport
   const handleAddSport = () => {
+    // Determine memberType and parentSubscriptionId from existing subscriptions.
+    // Prefer an active linked subscription; fall back to any linked subscription.
+    const subs = profile?.subscriptions || [];
+    const linkedSub =
+      subs.find((s) => s.memberType === "linked" && s.status === "active") ||
+      subs.find((s) => s.memberType === "linked");
+
+    const memberType = linkedSub ? "linked" : "standalone";
+    const parentSubscriptionId = linkedSub?.parentSubscriptionId || null;
+
     navigate(`/academy/new`, {
       state: {
         childId: memberId,
@@ -281,6 +291,8 @@ export default function ChildProfile() {
           phone: profile.member.phone,
           guardianName: profile.member.guardianName,
           guardianPhone: profile.member.guardianPhone,
+          memberType,
+          parentSubscriptionId,
         },
       },
     });

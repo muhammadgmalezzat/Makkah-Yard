@@ -206,6 +206,7 @@ const getChildProfileCtrl = async (req, res, next) => {
         pricePaid: sub.pricePaid,
         paymentMethod: sub.paymentMethod,
         memberType: sub.memberType,
+        parentSubscriptionId: sub.parentSubscriptionId,
         renewalCount: sub.renewalCount,
       })),
       totalPaid,
